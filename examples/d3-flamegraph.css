@@ -1,0 +1,67 @@
+.d3-flame-graph {
+  position: relative;
+  width: max-content;
+}
+
+.d3-flame-graph .title {
+  font-size: 20px;
+  font-family: Verdana;
+  color: #808080
+}
+
+.d3-flame-graph .nodes, .nodes-space {
+  position: relative;
+}
+
+.d3-flame-graph .node, .node-sm {
+  position: absolute;
+  overflow: hidden;
+  box-sizing: border-box;
+  left: 0;
+  top: 0;
+  height: 18px;
+  border: 1px solid white;
+
+  transition-property: left, top, width;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+.d3-flame-graph .node {
+  padding: 0 4px 0 4px;
+  white-space: nowrap;
+  font-size: 12px;
+  font-family: Verdana;
+  font-weight: 400;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  text-align: left;
+  color: black;
+}
+
+.d3-flame-graph .node:hover, .node-sm:hover {
+    border: 1px solid black;
+    cursor: pointer;
+}
+
+.d3-flame-graph .stem {
+  opacity: 0.6;
+}
+
+.d3-flame-graph .highlight {
+  border: 1px solid blue;
+}
+
+.d3-flame-graph .tip {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 0;
+  font-family: Verdana;
+  font-size: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
