@@ -31,9 +31,7 @@ export default function () {
   const tipElement = document.createElement('div')
   // Safari is very annoying with its default tooltips for text with ellipsis.
   // The only way to disable it is to add dummy block element inside.
-  // Using <pre> to not interfere with d3 selectAll('div') that just can't select only
-  // direct children and wants to traverse the whole subtree.
-  const tipDeterringElement = document.createElement('pre')
+  const tipDeterringElement = document.createElement('div')
   containerElement.className = 'd3-flame-graph'
   titleElement.className = 'title'
   nodesSpaceElement.className = 'nodes-space'
@@ -427,7 +425,7 @@ export default function () {
       const top = inverted ? function (d) { return y(d.depth) } : function (d) { return h - y(d.depth) - c }
 
       // JOIN new data with old elements.
-      const g = select(nodesElement).selectAll('div').data(descendants, function (d) { return d.id })
+      const g = select(nodesElement).selectAll(function () { return nodesElement.childNodes }).data(descendants, function (d) { return d.id })
 
       // EXIT old elements not present in new data.
       g.exit().each(function (d) {
