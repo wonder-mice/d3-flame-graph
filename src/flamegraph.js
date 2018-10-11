@@ -390,7 +390,9 @@ export default function () {
 
   function nodeMouseOut () {
     if (tooltip) {
-      this.removeChild(tipDeterringElement)
+      if (tipDeterringElement.parentElement === this) {
+        this.removeChild(tipDeterringElement)
+      }
       if (!externalState.shiftKey) {
         tipHide()
       }
