@@ -456,30 +456,6 @@ export default function () {
     })
   }
 
-  function merge (data, samples) {
-    samples.forEach(function (sample) {
-      var node = data.find(function (element) {
-        return (element.name === sample.name)
-      })
-
-      if (node) {
-        if (node.original) {
-          node.original += sample.value
-        } else {
-          node.value += sample.value
-        }
-        if (sample.children) {
-          if (!node.children) {
-            node.children = []
-          }
-          merge(node.children, sample.children)
-        }
-      } else {
-        data.push(sample)
-      }
-    })
-  }
-
   function forEachNode (node, f) {
     f(node)
     let children = node.children
@@ -706,15 +682,6 @@ export default function () {
     }
     clickHandler = _
     return chart
-  }
-
-  chart.merge = function (samples) {
-    var newRoot // Need to re-create hierarchy after data changes.
-    merge([root.data], [samples])
-    newRoot = hierarchy(root.data, getItemChildren)
-    adoptNode(newRoot)
-    root = newRoot
-    update()
   }
 
   chart.minFrameSize = function (_) {
