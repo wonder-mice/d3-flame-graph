@@ -5,10 +5,53 @@ import { partition, hierarchy } from 'd3-hierarchy'
 import { scaleLinear } from 'd3-scale'
 
 export default function () {
+  function Node (parent, data, depth, id) {
+    this.parent = parent
+    this.data = data // `item`, name `data` used for compatibility with d3.
+    this.depth = depth
+    this.id = id
+    this.height = 0
+  }
+
+  Node.prototype = {}
+  // Make `Node` compatible with `d3.Node`.
+  Node.prototype = Object.assign(Node.prototype, hierarchy.prototype)
+  Node.prototype.constructor = Node
+
+  function updateNodeSiblingsHeight (siblingsList) {
+    let nodes, n, node, height
+    let i = siblingsList.length
+    while (i--) {
+      nodes = siblingsList[i]
+      n = nodes.length
+      height = 0
+      while (n--) {
+        node = nodes[n]
+        if (height < node.height) {
+          height = node.height
+        }
+      }
+      nodes[0].parent.height = height + 1
+    }
+  }
+
+  function updateNodeAncestorsHeight (node) {
+    let parent, height
+    while ((parent = node.parent)) {
+      height = node.height + 1
+      if (height <= parent.height) {
+        break
+      }
+      parent.height = height
+      node = parent
+    }
+  }
+
   var w = null // graph width
   var h = null // graph height
   var cellHeight = 18
   var root = null
+  var idgen = 0
   var tooltip = true // enable tooltip
   var title = '' // graph title
   var sort = false
@@ -79,6 +122,40 @@ export default function () {
 
   var getItemChildren = function (item) {
     return item.c || item.children
+  }
+
+  var getItemRoot = function (datum) {
+    return datum
+  }
+
+  var getNodeRoot = function (datum) {
+    return new Node(null, getItemRoot(datum), 0, idgen++)
+  }
+
+  var updateNodeDecendants = function (root) {
+    let nodes, i, node, itemChildren, depth, k, nodeChildren
+    const queue = [[root]]
+    const siblingsList = []
+    while (queue.length) {
+      nodes = queue.pop()
+      i = nodes.length
+      while (i--) {
+        node = nodes[i]
+        depth = node.depth + 1
+        itemChildren = getItemChildren(node.data)
+        if (itemChildren && (k = itemChildren.length)) {
+          nodeChildren = []
+          while (k--) {
+            nodeChildren.push(new Node(node, itemChildren[k], depth, idgen++))
+          }
+          node.children = nodeChildren
+          queue.push(nodeChildren)
+          siblingsList.push(nodeChildren)
+        }
+      }
+    }
+    updateNodeSiblingsHeight(siblingsList)
+    updateNodeAncestorsHeight(root)
   }
 
   var searchHandler = function () {
@@ -405,6 +482,10 @@ export default function () {
     // FIXME: This can return list of children lists (since it builds it anyway) that can efficiently sorted without
     // FIXME: full tree traversal. This list also can be used later in filtering step with the same benefits.
     reappraiseNode(root)
+    // FIXME: Looks like totalValue logic is broken, since we will recalculate values in update().
+    // FIXME: And it doesn't account for `selfValue` option.
+    totalValue = root.value
+
     if (sort) {
       root.sort(doSort)
     }
@@ -456,46 +537,9 @@ export default function () {
     })
   }
 
-  function forEachNode (node, f) {
-    f(node)
-    let children = node.children
-    if (children) {
-      const stack = [children]
-      let count, child, grandChildren
-      while (stack.length) {
-        children = stack.pop()
-        count = children.length
-        while (count--) {
-          child = children[count]
-          f(child)
-          grandChildren = child.children
-          if (grandChildren) {
-            stack.push(grandChildren)
-          }
-        }
-      }
-    }
-  }
-
-  function adoptNode (node) {
-    maxDelta = 0
-    let id = 0
-    let delta = 0
-    const wantDelta = differential
-    forEachNode(node, function (n) {
-      n.id = id++
-      if (wantDelta) {
-        delta = Math.abs(getItemDelta(n.data))
-        if (maxDelta < delta) {
-          maxDelta = delta
-        }
-      }
-    })
-  }
-
   function reappraiseNode (root) {
     // FIXME: No need to set value for children of hidden nodes, since we will filter them out
-    let node, children, grandChildren, childrenValue, i, j, child, childValue
+    let node, children, grandChildren, childrenValue, i, j, child, childValue, delta
     const stack = []
     const included = []
     const excluded = []
@@ -510,12 +554,19 @@ export default function () {
       root.value = root.fade ? 0 : getItemValue(root.data)
       stack.push(root)
     }
+    maxDelta = 0
     // First DFS pass:
     // 1. Update node.value with node's self value
     // 2. Populate excluded list with children under hidden nodes
     // 3. Populate included list with children under visible nodes
     while ((node = stack.pop())) {
       children = node.children
+      if (differential) {
+        delta = Math.abs(getItemDelta(node.data))
+        if (maxDelta < delta) {
+          maxDelta = delta
+        }
+      }
       if (children && (i = children.length)) {
         childrenValue = 0
         while (i--) {
@@ -574,11 +625,8 @@ export default function () {
   function chart (s) {
     if (!arguments.length) return chart
 
-    root = hierarchy(s.datum(), getItemChildren)
-    adoptNode(root)
-    // FIXME: Looks like totalValue logic is broken, since we will recalculate values in update().
-    // FIXME: And it doesn't account for `selfValue` option.
-    totalValue = root.value
+    root = getNodeRoot(s.datum())
+    updateNodeDecendants(root)
 
     titleElement.innerHTML = title
     nodesElement.style.width = w ? w + 'px' : '100%'
