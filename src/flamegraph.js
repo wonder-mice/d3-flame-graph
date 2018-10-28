@@ -1,8 +1,5 @@
 import { select } from 'd3-selection'
 import { format } from 'd3-format'
-import { ascending } from 'd3-array'
-import { partition, hierarchy } from 'd3-hierarchy'
-import { scaleLinear } from 'd3-scale'
 
 export default function () {
   function Node (parent, data, depth, id) {
