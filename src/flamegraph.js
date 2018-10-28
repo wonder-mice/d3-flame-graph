@@ -2,7 +2,52 @@ import { select } from 'd3-selection'
 import { format } from 'd3-format'
 
 export default function () {
-  function Node (parent, data, depth, id) {
+  var getItemRoot = function (datum) {
+    return datum
+  }
+
+  var getItemChildren = function (item) {
+    return item.c || item.children
+  }
+
+  var getItemName = function (item) {
+    return item.n || item.name
+  }
+
+  var getItemValue = function (item) {
+    return item.v || item.value
+  }
+
+  var getItemDelta = function (item) {
+    return item.d || item.delta
+  }
+
+  var getItemKind = function (item) {
+    return item.l || item.libtype
+  }
+
+  var createAggregatedItem = function (item) {
+    return { items: [item] }
+  }
+
+  var addAggregatedItem = function (aggregated, item) {
+    aggregated.items.push(item)
+  }
+
+  var getAggregatedItemValue = function (aggregatedItem) {
+    let value = 0
+    const items = aggregatedItem.items
+    for (let i = items.length; i--;) { value += getItemValue(items[i]) }
+    return value
+  }
+
+  var getAggregatedItemDelta = function (aggregatedItem) {
+    let delta = 0
+    const items = aggregatedItem.items
+    for (let i = items.length; i--;) { delta += getItemDelta(items[i]) }
+    return delta
+  }
+
     this.parent = parent
     this.data = data // `item`, name `data` used for compatibility with d3.
     this.depth = depth
@@ -776,6 +821,30 @@ export default function () {
   chart.getItemKind = function (_) {
     if (!arguments.length) { return getItemKind }
     getItemKind = _
+    return chart
+  }
+
+  chart.createAggregatedItem = function (_) {
+    if (!arguments.length) { return createAggregatedItem }
+    createAggregatedItem = _
+    return chart
+  }
+
+  chart.addAggregatedItem = function (_) {
+    if (!arguments.length) { return addAggregatedItem }
+    addAggregatedItem = _
+    return chart
+  }
+
+  chart.getAggregatedItemValue = function (_) {
+    if (!arguments.length) { return getAggregatedItemValue }
+    getAggregatedItemValue = _
+    return chart
+  }
+
+  chart.getAggregatedItemDelta = function (_) {
+    if (!arguments.length) { return getAggregatedItemDelta }
+    getAggregatedItemDelta = _
     return chart
   }
 
