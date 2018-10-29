@@ -176,6 +176,152 @@ export default function () {
     return nodes.size ? Array.from(nodes.values()) : null
   }
 
+  // Performs pre-layout stage by updating `node.total`, `node.self` and `node.delta`
+  // fields using `getItemValue()` and `getItemDelta()` functions. Updated fields don't
+  // have any intrinsic semantic meaning other than how layout interprets them. Nodes
+  // will be laid out in space allowed by `parent.total - parent.self` proportionally
+  // to their `total` value.
+  // Item value (returned from `getItemValue()`) can be negative (e.g. when value
+  // represents some kind of delta, though not necessary the same as `getItemDelta()`).
+  // In such case, updated `total` and `self` values will be positive, however in their
+  // computation signed item value will be used. Note that, it's NOT neccessary true
+  // that:
+  //   parent.total == parent.self + sum([child.total for child in parent.children])
+  function updateItemViewNodeValues (rootNodes) {
+    if (!rootNodes || !rootNodes.length) {
+      return
+    }
+    let i, node, children, nodes, nodesTotal, k, value, parent
+    const needDelta = itemDeltaPresent
+    const hasTotal = !itemValueSelf
+    const queue = []
+    const siblingsList = []
+    // These bootstrap loop allows to use more efficient algorithm in main processing
+    // loop (that would require to check for `node.parent` to be not null, which also
+    // is not a reliable indicator in case of mixed-view node hierarchies we plan for).
+    for (i = rootNodes.length; i--;) {
+      node = rootNodes[i]
+      value = getItemValue(node.item)
+      if (hasTotal) {
+        node.total = Math.abs(node.self = value)
+      } else {
+        node.self = Math.abs(node.total = value)
+      }
+      if (needDelta) {
+        node.delta = getItemDelta(node.item)
+      }
+      children = node.children
+      if (children && children.length) {
+        queue.push(children)
+        siblingsList.push(children)
+      }
+    }
+    // If `hasTotal`, update `node.total` and compute `node.self` values. Otherwise,
+    // update `node.self` and populate `siblingsList` that will be processed later.
+    while ((nodes = queue.pop())) {
+      nodesTotal = 0
+      i = nodes.length
+      while (i--) {
+        node = nodes[i]
+        value = getItemValue(node.item)
+        if (hasTotal) {
+          node.total = Math.abs(node.self = value)
+          nodesTotal += value
+        } else {
+          node.self = Math.abs(node.total = value)
+        }
+        if (needDelta) {
+          node.delta = getItemDelta(node.item)
+        }
+        children = node.children
+        if (children && children.length) {
+          queue.push(children)
+          siblingsList.push(children)
+        }
+      }
+      if (hasTotal) {
+        parent = node.parent
+        parent.self = Math.abs(parent.self - nodesTotal)
+      }
+    }
+    // If neccessary, traverse the tree in reverse order and compute `total` fields.
+    if (!hasTotal) {
+      for (i = siblingsList.length; i--;) {
+        nodesTotal = 0
+        nodes = siblingsList[i]
+        for (k = nodes.length; k--;) {
+          node = nodes[k]
+          node.total = Math.abs(value = node.total)
+          nodesTotal += value
+        }
+        parent = node.parent
+        parent.total = Math.abs(parent.total + nodesTotal)
+      }
+    }
+  }
+
+  // Same as `updateItemViewNodeValues()`, but for flatten view.
+  function updateFlattenViewNodeValues (rootNodes) {
+    let nodes, i, node, children
+    const needDelta = itemDeltaPresent
+    const queue = [rootNodes]
+    while ((nodes = queue.pop())) {
+      for (i = nodes.length; i--;) {
+        node = nodes[i]
+        node.self = 0
+        node.total = Math.abs(getAggregatedItemValue(node.item))
+        if (needDelta) {
+          node.delta = getAggregatedItemDelta(node.item)
+        }
+        children = node.children
+        if (children && children.length) {
+          queue.push(children)
+        }
+      }
+    }
+  }
+
+  function createItemViewNode (datum) {
+    let nodes, i, node, itemChildren, depth, k, nodeChildren, childItem, childNode
+    const rootItem = getItemRoot(datum)
+    const rootNode = new Node(null, 0, rootItem, getItemName(rootItem))
+    const queue = [[rootNode]]
+    const siblingsList = []
+    while ((nodes = queue.pop())) {
+      for (i = nodes.length; i--;) {
+        node = nodes[i]
+        depth = node.depth + 1
+        itemChildren = getItemChildren(node.item)
+        if (itemChildren && (k = itemChildren.length)) {
+          nodeChildren = []
+          while (k--) {
+            childItem = itemChildren[k]
+            childNode = new Node(node, depth, childItem, getItemName(childItem))
+            nodeChildren.push(childNode)
+          }
+          node.children = nodeChildren
+          queue.push(nodeChildren)
+          siblingsList.push(nodeChildren)
+        }
+      }
+    }
+    updateNodeSiblingsHeight(siblingsList)
+    updateNodeAncestorsHeight(rootNode)
+    return rootNode
+  }
+
+  function createFlattenViewNode (datum) {
+    const rootItem = getItemRoot(datum)
+    const rootNode = new Node(null, 0, createAggregatedItem(rootItem), getItemName(rootItem))
+    rootNode.roots = [rootItem]
+    const childrenNodes = rootNode.children = aggregatedNodesByFlatteningItems(rootNode, rootNode.roots)
+    if (childrenNodes && childrenNodes.length) {
+      updateNodeSiblingsHeight([childrenNodes])
+      updateNodeAncestorsHeight(rootNode)
+    }
+    return rootNode
+  }
+
   // Default node sorting function orders by `node.total` with larger nodes on the left.
   function nodesTotalOrder (nodeA, nodeB) {
     return nodeA.total - nodeB.total
