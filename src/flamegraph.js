@@ -54,26 +54,32 @@ export default function () {
     this.item = item
     this.name = name
     this.id = id
-    this.height = 0
+    this.height = 0 // max([child.height for child in children]) + 1, 0 for leave nodes.
   }
 
+  // `siblingsList` is list of siblings lists (array of arrays). Each siblings list
+  // must be non-empty and contain only children of the same parent. Siblings lists
+  // must be in DFS post-order (list with parent node must be before all lists with
+  // descendant nodes). Function will update `height` up to common ancestor node,
+  // which itself *must* *not* be in `siblingsList`.
   function updateNodeSiblingsHeight (siblingsList) {
     let nodes, n, node, height
-    let i = siblingsList.length
-    while (i--) {
+    for (let i = siblingsList.length; i--;) {
       nodes = siblingsList[i]
-      n = nodes.length
       height = 0
-      while (n--) {
+      for (n = nodes.length; n--;) {
         node = nodes[n]
         if (height < node.height) {
           height = node.height
         }
       }
-      nodes[0].parent.height = height + 1
+      node.parent.height = height + 1
     }
   }
 
+  // `node` must have correct/desired `height` set. Function will update `height` of
+  // all ancestors, including the root node. For efficiency purposes, this function
+  // can only increase `height`.
   function updateNodeAncestorsHeight (node) {
     let parent, height
     while ((parent = node.parent)) {
