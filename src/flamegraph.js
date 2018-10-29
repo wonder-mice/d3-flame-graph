@@ -97,6 +97,40 @@ export default function () {
     return nodeA.total - nodeB.total
   }
 
+  // Keeps track of current callstack frames and facilitates recursion detection.
+  // Initial `level` is 0 (callstack is empty). Frames are expected to be strings
+  // that contain function and module name.
+  class Callstack {
+    constructor () {
+      this.frames = []
+      this.frameCounts = new Map()
+    }
+    push (frame) {
+      const n = this.frameCounts.get(frame)
+      this.frameCounts.set(frame, undefined === n ? 1 : n + 1)
+      this.frames.push(frame)
+    }
+    pop (level) {
+      let frame, n
+      while (level < this.frames.length) {
+        frame = this.frames.pop()
+        n = this.frameCounts.get(frame)
+        if (n > 1) {
+          this.frameCounts.set(frame, n - 1)
+        } else {
+          this.frameCounts.delete(frame)
+        }
+      }
+    }
+    recursive (frame) {
+      return undefined !== this.frameCounts.get(frame)
+    }
+  }
+
+  var root = null
+  var updateNodeValues = null
+  var expandNode = null
+
   var w = null // graph width
   var h = null // graph height
   var cellHeight = 18
