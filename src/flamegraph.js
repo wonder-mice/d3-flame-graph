@@ -48,17 +48,14 @@ export default function () {
     return delta
   }
 
+  function Node (parent, depth, item, name, id) {
     this.parent = parent
-    this.data = data // `item`, name `data` used for compatibility with d3.
     this.depth = depth
+    this.item = item
+    this.name = name
     this.id = id
     this.height = 0
   }
-
-  Node.prototype = {}
-  // Make `Node` compatible with `d3.Node`.
-  Node.prototype = Object.assign(Node.prototype, hierarchy.prototype)
-  Node.prototype.constructor = Node
 
   function updateNodeSiblingsHeight (siblingsList) {
     let nodes, n, node, height
