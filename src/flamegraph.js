@@ -134,11 +134,9 @@ export default function () {
   var w = null // graph width
   var h = null // graph height
   var cellHeight = 18
-  var root = null
   var idgen = 0
   var tooltip = true // enable tooltip
   var title = '' // graph title
-  var sort = false
   var order = nodesTotalOrder
   var inverted = false // invert the graph direction
   var clickHandler = null
@@ -148,9 +146,7 @@ export default function () {
   var differential = false
   var elided = false
   var searchSum = 0
-  var totalValue = 0
   var maxDelta = 0
-  var p = partition()
 
   const containerElement = document.createElement('div')
   const titleElement = document.createElement('div')
@@ -188,33 +184,6 @@ export default function () {
       return window.getSelection().type === 'Range'
     }
   }
-
-  var getItemName = function (item) {
-    return item.n || item.name
-  }
-
-  var getItemValue = function (item) {
-    return item.v || item.value
-  }
-
-  var getItemDelta = function (item) {
-    return item.d || item.delta
-  }
-
-  var getItemKind = function (item) {
-    return item.l || item.libtype
-  }
-
-  var getItemChildren = function (item) {
-    return item.c || item.children
-  }
-
-  var getItemRoot = function (datum) {
-    return datum
-  }
-
-  var getNodeRoot = function (datum) {
-    return new Node(null, getItemRoot(datum), 0, idgen++)
   }
 
   var updateNodeDecendants = function (root) {
