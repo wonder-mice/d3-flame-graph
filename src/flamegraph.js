@@ -2,6 +2,9 @@ import { select } from 'd3-selection'
 import { format } from 'd3-format'
 
 export default function () {
+  var itemValueSelf = false
+  var itemDeltaPresent = false
+
   var getItemRoot = function (datum) {
     return datum
   }
@@ -48,12 +51,14 @@ export default function () {
     return delta
   }
 
-  function Node (parent, depth, item, name, id) {
+  var nodeIdGenerator = 0
+
+  function Node (parent, depth, item, name) {
     this.parent = parent
     this.depth = depth
     this.item = item
     this.name = name
-    this.id = id
+    this.id = ++nodeIdGenerator
     this.height = 0 // max([child.height for child in children]) + 1, 0 for leave nodes.
   }
 
@@ -92,11 +97,6 @@ export default function () {
     }
   }
 
-  // Default node sorting function orders by `node.total` with larger nodes on the left.
-  function nodesTotalOrder (nodeA, nodeB) {
-    return nodeA.total - nodeB.total
-  }
-
   // Keeps track of current callstack frames and facilitates recursion detection.
   // Initial `level` is 0 (callstack is empty). Frames are expected to be strings
   // that contain function and module name.
@@ -127,6 +127,60 @@ export default function () {
     }
   }
 
+  // Aggregates descendants of `rootItems` (but not `rootItems` themselves) with the
+  // same name, regardless of their place in items hierarchy.
+  function aggregatedNodesByFlatteningItems (parentNode, rootItems) {
+    let n, children, i, item, level, name, recursive, node
+    const queue = []
+    n = rootItems.length
+    while (n--) {
+      children = getItemChildren(rootItems[n])
+      if (children && (i = children.length)) {
+        while (i--) {
+          queue.push(children[i])
+        }
+      }
+    }
+    const aggregateRecursive = itemValueSelf
+    const depth = parentNode.depth + 1
+    const levels = Array(queue.length).fill(0)
+    const callstack = new Callstack()
+    const nodes = new Map()
+    while ((item = queue.pop())) {
+      level = levels.pop()
+      name = getItemName(item)
+      recursive = callstack.recursive(name)
+      if (aggregateRecursive || !recursive) {
+        node = nodes.get(name)
+        if (undefined === node) {
+          node = new Node(parentNode, depth, createAggregatedItem(item), name)
+          node.roots = [item]
+          nodes.set(name, node)
+        } else {
+          addAggregatedItem(node.item, item)
+          if (!recursive) {
+            node.roots.push(item)
+          }
+        }
+      }
+      children = getItemChildren(item)
+      if (children && (i = children.length)) {
+        callstack.pop(level++)
+        callstack.push(name)
+        while (i--) {
+          queue.push(children[i])
+          levels.push(level)
+        }
+      }
+    }
+    return nodes.size ? Array.from(nodes.values()) : null
+  }
+
+  // Default node sorting function orders by `node.total` with larger nodes on the left.
+  function nodesTotalOrder (nodeA, nodeB) {
+    return nodeA.total - nodeB.total
+  }
+
   var root = null
   var updateNodeValues = null
   var expandNode = null
@@ -134,7 +188,6 @@ export default function () {
   var w = null // graph width
   var h = null // graph height
   var cellHeight = 18
-  var idgen = 0
   var tooltip = true // enable tooltip
   var title = '' // graph title
   var order = nodesTotalOrder
@@ -142,8 +195,6 @@ export default function () {
   var clickHandler = null
   var minFrameSize = 0
   var detailsElement = null
-  var selfValue = false
-  var differential = false
   var elided = false
   var searchSum = 0
   var maxDelta = 0
