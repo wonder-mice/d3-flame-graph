@@ -92,6 +92,11 @@ export default function () {
     }
   }
 
+  // Default node sorting function orders by `node.total` with larger nodes on the left.
+  function nodesTotalOrder (nodeA, nodeB) {
+    return nodeA.total - nodeB.total
+  }
+
   var w = null // graph width
   var h = null // graph height
   var cellHeight = 18
@@ -100,6 +105,7 @@ export default function () {
   var tooltip = true // enable tooltip
   var title = '' // graph title
   var sort = false
+  var order = nodesTotalOrder
   var inverted = false // invert the graph direction
   var clickHandler = null
   var minFrameSize = 0
@@ -718,8 +724,12 @@ export default function () {
   }
 
   chart.sort = function (_) {
-    if (!arguments.length) { return sort }
-    sort = _
+    if (!arguments.length) { return order }
+    if (typeof _ === 'function') {
+      order = _
+    } else {
+      order = _ ? nodesTotalOrder : null
+    }
     return chart
   }
 
