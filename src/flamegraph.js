@@ -615,19 +615,26 @@ export default function () {
     // Need to reset `display` here, so `getBoundingClientRect()` will actually layout the `tipElement`.
     tipElement.style.display = 'unset'
     const tipRect = tipElement.getBoundingClientRect()
-    const cw = document.documentElement.clientWidth
-    const ch = document.documentElement.clientHeight
+    const clientWidth = document.documentElement.clientWidth
+    const clientHeight = document.documentElement.clientHeight
     let x = -insideRect.left
-    if (cw < itemRect.left + tipRect.width) {
-      x += cw - tipRect.width
+    if (clientWidth < itemRect.left + tipRect.width) {
+      x += clientWidth - tipRect.width
     } else if (itemRect.left > 0) {
       x += itemRect.left
     }
     let y = -insideRect.top
-    if (ch < itemRect.top + itemRect.height + tipRect.height) {
-      y += itemRect.top - tipRect.height
+    const itemBottom = itemRect.top + itemRect.height
+    const tipBottom = itemBottom + tipRect.height
+    if (clientHeight < tipBottom) {
+      const tipTop = itemRect.top - tipRect.height
+      if (0 <= tipTop || clientHeight - tipBottom < tipTop) {
+        y += tipTop
+      } else {
+        y += itemBottom
+      }
     } else {
-      y += itemRect.top + itemRect.height
+      y += itemBottom
     }
     tipElement.style.transform = 'translate(' + x + 'px,' + y + 'px)'
   }
