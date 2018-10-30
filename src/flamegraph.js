@@ -281,6 +281,17 @@ export default function () {
     }
   }
 
+  function expandFlattenViewNode (node) {
+    if (undefined === node.children) {
+      const children = node.children = aggregatedNodesByFlatteningItems(node, node.roots)
+      if (children) {
+        updateNodeSiblingsHeight([children])
+        updateNodeAncestorsHeight(node)
+        updateFlattenViewNodeValues(children)
+      }
+    }
+  }
+
   function createItemViewNode (datum) {
     let nodes, i, node, itemChildren, depth, k, nodeChildren, childItem, childNode
     const rootItem = getItemRoot(datum)
@@ -307,6 +318,7 @@ export default function () {
     }
     updateNodeSiblingsHeight(siblingsList)
     updateNodeAncestorsHeight(rootNode)
+    updateItemViewNodeValues([rootNode])
     return rootNode
   }
 
@@ -319,6 +331,7 @@ export default function () {
       updateNodeSiblingsHeight([childrenNodes])
       updateNodeAncestorsHeight(rootNode)
     }
+    updateFlattenViewNodeValues([rootNode])
     return rootNode
   }
 
@@ -552,7 +565,6 @@ export default function () {
         b = 0 + Math.round(55 * (1 - vector))
       }
     }
-
     return 'rgb(' + r + ',' + g + ',' + b + ')'
   }
 
@@ -628,11 +640,14 @@ export default function () {
     return tipElement.style.display !== 'none'
   }
 
-  function zoom (d) {
-    hideSiblings(d)
-    show(d)
-    fadeAncestors(d)
-    update()
+  function zoom (node) {
+    if (expandNode) {
+      expandNode(node)
+    }
+    hideSiblings(node)
+    show(node)
+    fadeAncestors(node)
+    updateView()
   }
 
   function searchTree (d, term) {
@@ -676,24 +691,6 @@ export default function () {
     }
   }
 
-  function doSort (a, b) {
-    if (typeof sort === 'function') {
-      return sort(a, b)
-    } else if (sort) {
-      return ascending(getItemName(a.data), getItemName(b.data))
-    }
-  }
-
-  function filterNodes (root, width) {
-    var nodeList = root.descendants()
-    if (minFrameSize > 0) {
-      nodeList = nodeList.filter(function (el) {
-        return width(el) > minFrameSize
-      })
-    }
-    return nodeList
-  }
-
   function nodeClick () {
     if (!externalState.textSelected()) {
       if (tooltip) tipHide()
@@ -725,172 +722,34 @@ export default function () {
     }
   }
 
-  function update () {
-    const nodesRect = nodesElement.getBoundingClientRect()
-    const x = scaleLinear().rangeRound([0, nodesRect.width])
-    const y = scaleLinear().rangeRound([0, cellHeight])
-
-    // FIXME: This can return list of children lists (since it builds it anyway) that can efficiently sorted without
-    // FIXME: full tree traversal. This list also can be used later in filtering step with the same benefits.
-    reappraiseNode(root)
-    // FIXME: Looks like totalValue logic is broken, since we will recalculate values in update().
-    // FIXME: And it doesn't account for `selfValue` option.
-    totalValue = root.value
-
-    if (sort) {
-      root.sort(doSort)
-    }
-    p(root)
-    const kx = nodesRect.width / (root.x1 - root.x0)
-    const dy = nodesRect.height - cellHeight
-    const width = function (d) { return Math.round((d.x1 - d.x0) * kx) }
-    const top = inverted ? function (d) { return y(d.depth) } : function (d) { return dy - y(d.depth) }
-
-    const descendants = filterNodes(root, width)
-
-    // JOIN new data with old elements.
-    const g = select(nodesElement)
-      .selectAll(function () { return nodesElement.childNodes })
-      .data(descendants, function (d) { return d.id })
-
-    // EXIT old elements not present in new data.
-    g.exit().each(function (d) {
-      this.style.display = 'none'
-    })
-
-    // UPDATE old elements present in new data.
-    g.each(function (d) {
-      const wpx = width(d)
-      this.className = getNodeClass(d, wpx < 35)
-      this.style.backgroundColor = getNodeColor(d)
-      this.style.width = wpx + 'px'
-      this.style.left = x(d.x0) + 'px'
-      this.style.top = top(d) + 'px'
-      this.textContent = wpx < 35 ? '' : getItemName(d.data)
-      this.style.display = 'unset'
-    })
-
-    // ENTER new elements present in new data.
-    g.enter().append(function (d) {
-      const wpx = width(d)
-      const element = document.createElement('div')
-      element.className = getNodeClass(d, wpx < 35)
-      element.style.backgroundColor = getNodeColor(d)
-      element.style.width = wpx + 'px'
-      element.style.left = x(d.x0) + 'px'
-      element.style.top = top(d) + 'px'
-      element.textContent = wpx < 35 ? '' : getItemName(d.data)
-      if (!tooltip) element.title = labelHandler(d)
-      element.addEventListener('click', nodeClick)
-      element.addEventListener('mouseover', nodeMouseOver)
-      element.addEventListener('mouseout', nodeMouseOut)
-      return element
-    })
-  }
-
-  function reappraiseNode (root) {
-    // FIXME: No need to set value for children of hidden nodes, since we will filter them out
-    let node, children, grandChildren, childrenValue, i, j, child, childValue, delta
-    const stack = []
-    const included = []
-    const excluded = []
-    const compoundValue = !selfValue
-    if (root.hide) {
-      root.value = 0
-      children = root.children
-      if (children) {
-        excluded.push(children)
-      }
-    } else {
-      root.value = root.fade ? 0 : getItemValue(root.data)
-      stack.push(root)
-    }
-    maxDelta = 0
-    // First DFS pass:
-    // 1. Update node.value with node's self value
-    // 2. Populate excluded list with children under hidden nodes
-    // 3. Populate included list with children under visible nodes
-    while ((node = stack.pop())) {
-      children = node.children
-      if (differential) {
-        delta = Math.abs(getItemDelta(node.data))
-        if (maxDelta < delta) {
-          maxDelta = delta
-        }
-      }
-      if (children && (i = children.length)) {
-        childrenValue = 0
-        while (i--) {
-          child = children[i]
-          if (child.hide) {
-            child.value = 0
-            grandChildren = child.children
-            if (grandChildren) {
-              excluded.push(grandChildren)
-            }
-            continue
-          }
-          if (child.fade) {
-            child.value = 0
-          } else {
-            childValue = getItemValue(child.data)
-            child.value = childValue
-            childrenValue += childValue
-          }
-          stack.push(child)
-        }
-        // Here second part of `&&` is actually checking for `node.fade`. However,
-        // checking for node.value is faster and presents more oportunities for JS optimizer.
-        if (compoundValue && node.value) {
-          node.value -= childrenValue
-        }
-        included.push(children)
-      }
-    }
-    // Postorder traversal to compute compound value of each visible node.
-    i = included.length
-    while (i--) {
-      children = included[i]
-      childrenValue = 0
-      j = children.length
-      while (j--) {
-        childrenValue += children[j].value
-      }
-      children[0].parent.value += childrenValue
-    }
-    // Continue DFS to set value of all hidden nodes to 0.
-    while (excluded.length) {
-      children = excluded.pop()
-      j = children.length
-      while (j--) {
-        child = children[j]
-        child.value = 0
-        grandChildren = child.children
-        if (grandChildren) {
-          excluded.push(grandChildren)
-        }
-      }
-    }
-  }
-
-  function chart (s) {
-    if (!arguments.length) return chart
-
-    root = getNodeRoot(s.datum())
-    updateNodeDecendants(root)
-
+  function chart (element) {
     titleElement.innerHTML = title
     nodesElement.style.width = w ? w + 'px' : '100%'
-    nodesElement.style.height = (h || (root.height + 1) * cellHeight) + 'px'
+    nodesElement.style.height = h ? h + 'px' : '100%'
+    element.appendChild(containerElement)
+    return chart
+  }
 
-    s.each(function () {
-      if (this.childElementCount === 0) {
-        this.appendChild(containerElement)
-        externalState.listen()
-      }
-    })
+  chart.createItemsView = function (datum) {
+    root = createItemViewNode(datum)
+    updateNodeValues = updateItemViewNodeValues
+    expandNode = null
+    updateView()
+    return chart
+  }
 
-    update()
+  chart.createFlattenView = function (datum) {
+    root = createFlattenViewNode(datum)
+    updateNodeValues = updateFlattenViewNodeValues
+    expandNode = expandFlattenViewNode
+    updateView()
+    return chart
+  }
+
+  chart.updateValues = function () {
+    updateNodeValues([root])
+    updateView()
+    return chart
   }
 
   chart.height = function (_) {
@@ -940,8 +799,8 @@ export default function () {
   }
 
   chart.differential = function (_) {
-    if (!arguments.length) { return differential }
-    differential = _
+    if (!arguments.length) { return itemDeltaPresent }
+    itemDeltaPresent = _
     return chart
   }
 
@@ -1002,8 +861,8 @@ export default function () {
   chart.details = chart.setDetailsElement
 
   chart.selfValue = function (_) {
-    if (!arguments.length) { return selfValue }
-    selfValue = _
+    if (!arguments.length) { return itemValueSelf }
+    itemValueSelf = _
     return chart
   }
 
