@@ -293,6 +293,7 @@ export default function () {
   }
 
   function createItemViewNode (datum) {
+    nodeIdGenerator = 0
     let nodes, i, node, itemChildren, depth, k, nodeChildren, childItem, childNode
     const rootItem = getItemRoot(datum)
     const rootNode = new Node(null, 0, rootItem, getItemName(rootItem))
@@ -323,6 +324,7 @@ export default function () {
   }
 
   function createFlattenViewNode (datum) {
+    nodeIdGenerator = 0
     const rootItem = getItemRoot(datum)
     const rootNode = new Node(null, 0, createAggregatedItem(rootItem), getItemName(rootItem))
     rootNode.roots = [rootItem]
