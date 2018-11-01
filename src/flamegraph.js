@@ -1,6 +1,6 @@
 export default function () {
-  var itemValueSelf = false
-  var itemDeltaPresent = false
+  var itemSelfValue = false
+  var itemHasDelta = false
 
   var getItemRoot = function (datum) {
     return datum
@@ -20,10 +20,6 @@ export default function () {
 
   var getItemDelta = function (item) {
     return item.d || item.delta
-  }
-
-  var getItemKind = function (item) {
-    return item.l || item.libtype
   }
 
   var createAggregatedItem = function (item) {
@@ -48,50 +44,76 @@ export default function () {
     return delta
   }
 
-  var nodeIdGenerator = 0
-
-  function Node (parent, depth, item, name) {
+  function Node (parent, item, name) {
     this.parent = parent
-    this.depth = depth
     this.item = item
     this.name = name
-    this.id = ++nodeIdGenerator
-    this.height = 0 // max([child.height for child in children]) + 1, 0 for leave nodes.
   }
 
-  // `siblingsList` is list of siblings lists (array of arrays). Each siblings list
-  // must be non-empty and contain only children of the same parent. Siblings lists
-  // must be in DFS post-order (list with parent node must be before all lists with
-  // descendant nodes). Function will update `height` up to common ancestor node,
-  // which itself *must* *not* be in `siblingsList`.
-  function updateNodeSiblingsHeight (siblingsList) {
-    let nodes, n, node, height
-    for (let i = siblingsList.length; i--;) {
-      nodes = siblingsList[i]
-      height = 0
-      for (n = nodes.length; n--;) {
-        node = nodes[n]
-        if (height < node.height) {
-          height = node.height
+  function NodeContext () {
+    this.hasDelta = false
+    this.maxDelta = 0
+  }
+
+  var nodeWidthSmall = 35
+  var nodeClassBase = 'node'
+  var nodeClassBaseSmall = 'node-sm'
+  var nodeClassStem = ' stem'
+  var nodeClassHighlight = ' stem'
+
+  function getNodeColor (node, context) {
+    let r, g, b
+    if (context.hasDelta) {
+      const delta = node.delta || 0
+      const maxDelta = context.maxDelta
+      r = g = b = 220
+      if (delta > 0) {
+        g = b = Math.round(210 * (maxDelta - delta) / maxDelta)
+      } else if (delta < 0) {
+        g = r = Math.round(210 * (maxDelta + delta) / maxDelta)
+      }
+    } else {
+      let tone = 0
+      const name = node.name
+      if (name) {
+        const maxLength = 6
+        const n = maxLength < name.length ? maxLength : name.length
+        const mod = 10
+        let range = 0
+        for (let i = 0, weight = 1; i < n; ++i, weight *= 0.7) {
+          tone += weight * (name.charCodeAt(i) % mod)
+          range += weight * (mod - 1)
+        }
+        if (range > 0) {
+          tone /= range
         }
       }
-      node.parent.height = height + 1
+      r = 200 + Math.round(55 * tone)
+      g = 0 + Math.round(230 * (1 - tone))
+      b = 0 + Math.round(55 * (1 - tone))
     }
+    return 'rgb(' + r + ',' + g + ',' + b + ')'
   }
 
-  // `node` must have correct/desired `height` set. Function will update `height` of
-  // all ancestors, including the root node. For efficiency purposes, this function
-  // can only increase `height`.
-  function updateNodeAncestorsHeight (node) {
-    let parent, height
-    while ((parent = node.parent)) {
-      height = node.height + 1
-      if (height <= parent.height) {
-        break
-      }
-      parent.height = height
-      node = parent
+  function getNodeTitle (node, context) {
+    let title = node.name + ', total: ' + node.toal + ', self: ' + node.self
+    if (context.hasDelta) {
+      title += ', Δ: ' + node.delta
     }
+    return title
+  }
+
+  function setNodeContent (node, context) {
+    const small = node.width <= nodeWidthSmall
+    let classes = small ? nodeClassBaseSmall : nodeClassBase
+    if (node.row < 0) { classes += ' ' + nodeClassStem }
+    if (node.highlight) { classes += ' ' + nodeClassHighlight }
+    this.className = classes
+    this.textContent = small ? '' : node.name
+  }
+
+  function setNodeTip (node, context) {
+    this.innerText = getNodeTitle(node, context)
   }
 
   // Keeps track of current callstack frames and facilitates recursion detection.
@@ -104,7 +126,7 @@ export default function () {
     }
     push (frame) {
       const n = this.frameCounts.get(frame)
-      this.frameCounts.set(frame, undefined === n ? 1 : n + 1)
+      this.frameCounts.set(frame, n ? n + 1 : 1)
       this.frames.push(frame)
     }
     pop (level) {
@@ -120,7 +142,7 @@ export default function () {
       }
     }
     recursive (frame) {
-      return undefined !== this.frameCounts.get(frame)
+      return 0 < this.frameCounts.get(frame)
     }
   }
 
@@ -138,8 +160,7 @@ export default function () {
         }
       }
     }
-    const aggregateRecursive = itemValueSelf
-    const depth = parentNode.depth + 1
+    const aggregateRecursive = itemSelfValue
     const levels = Array(queue.length).fill(0)
     const callstack = new Callstack()
     const nodes = new Map()
@@ -149,8 +170,8 @@ export default function () {
       recursive = callstack.recursive(name)
       if (aggregateRecursive || !recursive) {
         node = nodes.get(name)
-        if (undefined === node) {
-          node = new Node(parentNode, depth, createAggregatedItem(item), name)
+        if (!node) {
+          node = new Node(parentNode, createAggregatedItem(item), name)
           node.roots = [item]
           nodes.set(name, node)
         } else {
@@ -180,17 +201,17 @@ export default function () {
   // to their `total` value.
   // Item value (returned from `getItemValue()`) can be negative (e.g. when value
   // represents some kind of delta, though not necessary the same as `getItemDelta()`).
-  // In such case, updated `total` and `self` values will be positive, however in their
-  // computation signed item value will be used. Note that, it's NOT neccessary true
-  // that:
+  // Keep in mind, that following is NOT neccessary true:
   //   parent.total == parent.self + sum([child.total for child in parent.children])
+  //   node.total >= node.self
+  // Layout is free to interpret such cases as it sees fit (pun intended).
   function updateItemViewNodeValues (rootNodes) {
     if (!rootNodes || !rootNodes.length) {
       return
     }
-    let i, node, children, nodes, nodesTotal, k, value, parent
-    const needDelta = itemDeltaPresent
-    const hasTotal = !itemValueSelf
+    let i, node, children, nodes, nodesTotal, k, parent
+    const hasDelta = itemHasDelta
+    const hasTotal = !itemSelfValue
     const queue = []
     const siblingsList = []
     // These bootstrap loop allows to use more efficient algorithm in main processing
@@ -198,13 +219,8 @@ export default function () {
     // is not a reliable indicator in case of mixed-view node hierarchies we plan for).
     for (i = rootNodes.length; i--;) {
       node = rootNodes[i]
-      value = getItemValue(node.item)
-      if (hasTotal) {
-        node.total = Math.abs(node.self = value)
-      } else {
-        node.self = Math.abs(node.total = value)
-      }
-      if (needDelta) {
+      node.total = node.self = getItemValue(node.item)
+      if (hasDelta) {
         node.delta = getItemDelta(node.item)
       }
       children = node.children
@@ -220,14 +236,8 @@ export default function () {
       i = nodes.length
       while (i--) {
         node = nodes[i]
-        value = getItemValue(node.item)
-        if (hasTotal) {
-          node.total = Math.abs(node.self = value)
-          nodesTotal += value
-        } else {
-          node.self = Math.abs(node.total = value)
-        }
-        if (needDelta) {
+        nodesTotal += (node.total = node.self = getItemValue(node.item))
+        if (hasDelta) {
           node.delta = getItemDelta(node.item)
         }
         children = node.children
@@ -238,7 +248,7 @@ export default function () {
       }
       if (hasTotal) {
         parent = node.parent
-        parent.self = Math.abs(parent.self - nodesTotal)
+        parent.self = parent.self - nodesTotal
       }
     }
     // If neccessary, traverse the tree in reverse order and compute `total` fields.
@@ -247,12 +257,10 @@ export default function () {
         nodesTotal = 0
         nodes = siblingsList[i]
         for (k = nodes.length; k--;) {
-          node = nodes[k]
-          node.total = Math.abs(value = node.total)
-          nodesTotal += value
+          nodesTotal += nodes[k].total
         }
-        parent = node.parent
-        parent.total = Math.abs(parent.total + nodesTotal)
+        parent = nodes[0].parent
+        parent.total = parent.total + nodesTotal
       }
     }
   }
@@ -260,14 +268,14 @@ export default function () {
   // Same as `updateItemViewNodeValues()`, but for flatten view.
   function updateFlattenViewNodeValues (rootNodes) {
     let nodes, i, node, children
-    const needDelta = itemDeltaPresent
+    const hasDelta = itemHasDelta
     const queue = [rootNodes]
     while ((nodes = queue.pop())) {
       for (i = nodes.length; i--;) {
         node = nodes[i]
         node.self = 0
         node.total = Math.abs(getAggregatedItemValue(node.item))
-        if (needDelta) {
+        if (hasDelta) {
           node.delta = getAggregatedItemDelta(node.item)
         }
         children = node.children
@@ -282,30 +290,26 @@ export default function () {
     if (undefined === node.children) {
       const children = node.children = aggregatedNodesByFlatteningItems(node, node.roots)
       if (children) {
-        updateNodeSiblingsHeight([children])
-        updateNodeAncestorsHeight(node)
         updateFlattenViewNodeValues(children)
       }
     }
   }
 
   function createItemViewNode (datum) {
-    nodeIdGenerator = 0
-    let nodes, i, node, itemChildren, depth, k, nodeChildren, childItem, childNode
+    let nodes, i, node, itemChildren, k, nodeChildren, childItem, childNode
     const rootItem = getItemRoot(datum)
-    const rootNode = new Node(null, 0, rootItem, getItemName(rootItem))
+    const rootNode = new Node(null, rootItem, getItemName(rootItem))
     const queue = [[rootNode]]
     const siblingsList = []
     while ((nodes = queue.pop())) {
       for (i = nodes.length; i--;) {
         node = nodes[i]
-        depth = node.depth + 1
         itemChildren = getItemChildren(node.item)
         if (itemChildren && (k = itemChildren.length)) {
           nodeChildren = []
           while (k--) {
             childItem = itemChildren[k]
-            childNode = new Node(node, depth, childItem, getItemName(childItem))
+            childNode = new Node(node, childItem, getItemName(childItem))
             nodeChildren.push(childNode)
           }
           node.children = nodeChildren
@@ -314,22 +318,15 @@ export default function () {
         }
       }
     }
-    updateNodeSiblingsHeight(siblingsList)
-    updateNodeAncestorsHeight(rootNode)
     updateItemViewNodeValues([rootNode])
     return rootNode
   }
 
   function createFlattenViewNode (datum) {
-    nodeIdGenerator = 0
     const rootItem = getItemRoot(datum)
-    const rootNode = new Node(null, 0, createAggregatedItem(rootItem), getItemName(rootItem))
+    const rootNode = new Node(null, createAggregatedItem(rootItem), getItemName(rootItem))
     rootNode.roots = [rootItem]
-    const childrenNodes = rootNode.children = aggregatedNodesByFlatteningItems(rootNode, rootNode.roots)
-    if (childrenNodes && childrenNodes.length) {
-      updateNodeSiblingsHeight([childrenNodes])
-      updateNodeAncestorsHeight(rootNode)
-    }
+    rootNode.children = aggregatedNodesByFlatteningItems(rootNode, rootNode.roots)
     updateFlattenViewNodeValues([rootNode])
     return rootNode
   }
@@ -339,23 +336,16 @@ export default function () {
     return nodeA.total - nodeB.total
   }
 
-  var root = null
-  var updateNodeValues = null
-  var expandNode = null
+  class HierarchyLayoutResult {
+    constructor () {
+      this.nodes = null
+      this.height = 0
+      this.rowHeight = 0
+      this.context = new NodeContext()
+      this.reference = 0
+    }
+  }
 
-  var w = null // graph width
-  var h = null // graph height
-  var cellHeight = 18
-  var tooltip = true // enable tooltip
-  var title = '' // graph title
-  var order = nodesTotalOrder
-  var inverted = false // invert the graph direction
-  var clickHandler = null
-  var minFrameSize = 0
-  var detailsElement = null
-  var elided = false
-  var searchSum = 0
-  var maxDelta = 0
 
   const containerElement = document.createElement('div')
   const titleElement = document.createElement('div')
