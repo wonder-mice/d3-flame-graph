@@ -346,6 +346,92 @@ export default function () {
     }
   }
 
+  class HierarchyLayout {
+    constructor () {
+      this.totalWidth = 0
+      this.nodeWidthMin = 0
+      this.rowHeight = 18
+      this.hasDelta = false
+      this.order = nodesTotalOrder
+    }
+    layout (rootNode, focusNode, reference) {
+      let node, i, children, childrenY, childrenRow, n, subtotal, ratio, child, childX, childWidth, delta
+      let totalHeight = 0
+      let maxDelta = 0
+      const nodes = []
+      const totalWidth = this.totalWidth
+      const nodeWidthMin = this.nodeWidthMin
+      const rowHeight = this.rowHeight
+      const hasDelta = this.hasDelta
+      const order = this.order
+      // Layout stem nodes.
+      const stemNodes = []
+      node = focusNode || rootNode
+      do { stemNodes.push(node) } while ((node = node.parent))
+      for (i = stemNodes.length; i--;) {
+        node = stemNodes[i]
+        node.row = 0 - i
+        node.width = totalWidth
+        node.x = 0
+        node.y = totalHeight
+        node.ref = reference
+        nodes.push(node)
+        totalHeight += rowHeight
+      }
+      maxDelta = hasDelta ? Math.abs(node.delta) : 0
+      // Layout branches.
+      const queue = [focusNode]
+      while ((node = queue.pop())) {
+        childrenY = node.y + rowHeight
+        children = node.children
+        if (!children || !(n = children.length)) {
+          if (totalHeight < childrenY) {
+            totalHeight = childrenY
+          }
+          continue
+        }
+        if (order) {
+          children.sort(order)
+        }
+        childrenRow = node.row + 1
+        subtotal = Math.abs(node.self)
+        for (i = n; i--;) {
+          subtotal += Math.abs(children[i].total)
+        }
+        ratio = 0 < subtotal ? node.width / subtotal : 0
+        for (childX = node.x, i = n; i--;) {
+          child = children[i]
+          childWidth = Math.abs(child.total) * ratio
+          if (childWidth < nodeWidthMin) {
+            continue
+          }
+          child.row = childrenRow
+          child.width = childWidth
+          child.x = childX
+          child.y = childrenY
+          child.ref = reference
+          nodes.push(child)
+          childX += childWidth
+          if (hasDelta) {
+            delta = Math.abs(child.delta)
+            if (maxDelta < delta) {
+              maxDelta = delta
+            }
+          }
+          queue.push(child)
+        }
+      }
+      const result = new HierarchyLayoutResult()
+      result.nodes = nodes
+      result.height = totalHeight
+      result.rowHeight = rowHeight
+      result.context.hasDelta = hasDelta
+      result.context.maxDelta = maxDelta
+      result.reference = reference
+      return result
+    }
+  }
+
 
   const containerElement = document.createElement('div')
   const titleElement = document.createElement('div')
