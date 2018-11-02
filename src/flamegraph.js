@@ -587,6 +587,26 @@ export default function () {
   containerElement.appendChild(titleElement)
   containerElement.appendChild(nodesSpaceElement)
 
+  const hierarchyLayout = new HierarchyLayout()
+  const hierarchyView = new HierarchyView(nodesElement)
+  const tooltipView = new TooltipView(nodesSpaceElement)
+
+  var rootNode = null
+  var focusNode = null
+  var updateNodeValues = null
+  var expandNode = null
+  var chartWidth = null
+  var chartHeight = null
+
+  function updateView () {
+    const nodesRect = nodesElement.getBoundingClientRect()
+    hierarchyLayout.totalWidth = nodesRect.width
+    hierarchyLayout.hasDelta = itemHasDelta
+    const layout = hierarchyLayout.layout(rootNode, focusNode, !hierarchyView.reference)
+    nodesElement.style.height = layout.height + 'px'
+    hierarchyView.render(layout)
+  }
+
   const externalState = {
     shiftKey: false,
     handleEvent (event) {
@@ -605,33 +625,7 @@ export default function () {
       return window.getSelection().type === 'Range'
     }
   }
-  }
-
-  var updateNodeDecendants = function (root) {
-    let nodes, i, node, itemChildren, depth, k, nodeChildren
-    const queue = [[root]]
-    const siblingsList = []
-    while (queue.length) {
-      nodes = queue.pop()
-      i = nodes.length
-      while (i--) {
-        node = nodes[i]
-        depth = node.depth + 1
-        itemChildren = getItemChildren(node.data)
-        if (itemChildren && (k = itemChildren.length)) {
-          nodeChildren = []
-          while (k--) {
-            nodeChildren.push(new Node(node, itemChildren[k], depth, idgen++))
-          }
-          node.children = nodeChildren
-          queue.push(nodeChildren)
-          siblingsList.push(nodeChildren)
-        }
-      }
-    }
-    updateNodeSiblingsHeight(siblingsList)
-    updateNodeAncestorsHeight(root)
-  }
+  externalState.listen()
 
   var searchHandler = function () {
     if (detailsElement) { setSearchDetails() }
@@ -653,218 +647,15 @@ export default function () {
   }
   var originalDetailsHandler = detailsHandler
 
-  var labelHandler = function (d) {
-    return getItemName(d.data) + ' (' + format('.3f')(100 * (d.x1 - d.x0), 3) + '%, ' + d.value + ' samples)'
-  }
-
   function setSearchDetails () {
-    detailsElement.innerHTML = `${searchSum} of ${totalValue} samples (${format('.3f')(100 * (searchSum / totalValue), 3)}%)`
-  }
-
-  function generateHash (name) {
-    // Return a vector (0.0->1.0) that is a hash of the input string.
-    // The hash is computed to favor early characters over later ones, so
-    // that strings with similar starts have similar vectors. Only the first
-    // 6 characters are considered.
-    const MAX_CHAR = 6
-
-    var hash = 0
-    var maxHash = 0
-    var weight = 1
-    var mod = 10
-
-    if (name) {
-      for (var i = 0; i < name.length; i++) {
-        if (i > MAX_CHAR) { break }
-        hash += weight * (name.charCodeAt(i) % mod)
-        maxHash += weight * (mod - 1)
-        weight *= 0.70
-      }
-      if (maxHash > 0) { hash = hash / maxHash }
-    }
-    return hash
-  }
-
-  var getNodeColor = function (node) {
-    // Return a color for the given name and library type. The library type
-    // selects the hue, and the name is hashed to a color in that hue.
-
-    let r
-    let g
-    let b
-
-    if (differential) {
-      let delta = getItemDelta(node.data)
-
-      r = 220
-      g = 220
-      b = 220
-
-      if (!delta) {
-        delta = 0
-      }
-
-      if (delta > 0) {
-        b = Math.round(210 * (maxDelta - delta) / maxDelta)
-        g = b
-      } else if (delta < 0) {
-        r = Math.round(210 * (maxDelta + delta) / maxDelta)
-        g = r
-      }
-    } else {
-      let name = getItemName(node.data)
-      let libtype = getItemKind(node.data)
-
-      // default when libtype is not in use
-      var hue = elided ? 'cold' : 'warm'
-
-      if (!elided && !(typeof libtype === 'undefined' || libtype === '')) {
-        // Select hue. Order is important.
-        hue = 'red'
-        if (typeof name !== 'undefined' && name && name.match(/::/)) {
-          hue = 'yellow'
-        }
-        if (libtype === 'kernel') {
-          hue = 'orange'
-        } else if (libtype === 'jit') {
-          hue = 'green'
-        } else if (libtype === 'inlined') {
-          hue = 'aqua'
-        }
-      }
-
-      // calculate hash
-      var vector = 0
-      if (name) {
-        var nameArr = name.split('`')
-        if (nameArr.length > 1) {
-          name = nameArr[nameArr.length - 1] // drop module name if present
-        }
-        name = name.split('(')[0] // drop extra info
-        vector = generateHash(name)
-      }
-
-      // calculate color
-      if (hue === 'red') {
-        r = 200 + Math.round(55 * vector)
-        g = 50 + Math.round(80 * vector)
-        b = g
-      } else if (hue === 'orange') {
-        r = 190 + Math.round(65 * vector)
-        g = 90 + Math.round(65 * vector)
-        b = 0
-      } else if (hue === 'yellow') {
-        r = 175 + Math.round(55 * vector)
-        g = r
-        b = 50 + Math.round(20 * vector)
-      } else if (hue === 'green') {
-        r = 50 + Math.round(60 * vector)
-        g = 200 + Math.round(55 * vector)
-        b = r
-      } else if (hue === 'aqua') {
-        r = 50 + Math.round(60 * vector)
-        g = 165 + Math.round(55 * vector)
-        b = g
-      } else if (hue === 'cold') {
-        r = 0 + Math.round(55 * (1 - vector))
-        g = 0 + Math.round(230 * (1 - vector))
-        b = 200 + Math.round(55 * vector)
-      } else {
-        // original warm palette
-        r = 200 + Math.round(55 * vector)
-        g = 0 + Math.round(230 * (1 - vector))
-        b = 0 + Math.round(55 * (1 - vector))
-      }
-    }
-    return 'rgb(' + r + ',' + g + ',' + b + ')'
-  }
-
-  const getNodeColorDefault = getNodeColor
-
-  var getNodeClass = function (node, small) {
-    let classes = small ? 'node-sm' : 'node'
-    if (node.fade) classes += ' stem'
-    if (node.highlight) classes += ' highlight'
-    return classes
-  }
-
-  function show (d) {
-    d.fade = false
-    d.hide = false
-    if (d.children) {
-      d.children.forEach(show)
-    }
-  }
-
-  function hideSiblings (node) {
-    let child = node
-    let parent = child.parent
-    let children, i, sibling
-    while (parent) {
-      children = parent.children
-      i = children.length
-      while (i--) {
-        sibling = children[i]
-        if (sibling !== child) {
-          sibling.hide = true
-        }
-      }
-      child = parent
-      parent = child.parent
-    }
-  }
-
-  function fadeAncestors (d) {
-    if (d.parent) {
-      d.parent.fade = true
-      fadeAncestors(d.parent)
-    }
-  }
-
-  function tipShow (d, itemRect, insideRect) {
-    tipElement.innerHTML = labelHandler(d)
-    // Need to reset `display` here, so `getBoundingClientRect()` will actually layout the `tipElement`.
-    tipElement.style.display = 'unset'
-    const tipRect = tipElement.getBoundingClientRect()
-    const clientWidth = document.documentElement.clientWidth
-    const clientHeight = document.documentElement.clientHeight
-    let x = -insideRect.left
-    if (clientWidth < itemRect.left + tipRect.width) {
-      x += clientWidth - tipRect.width
-    } else if (itemRect.left > 0) {
-      x += itemRect.left
-    }
-    let y = -insideRect.top
-    const itemBottom = itemRect.top + itemRect.height
-    const tipBottom = itemBottom + tipRect.height
-    if (clientHeight < tipBottom) {
-      const tipTop = itemRect.top - tipRect.height
-      if (0 <= tipTop || clientHeight - tipBottom < tipTop) {
-        y += tipTop
-      } else {
-        y += itemBottom
-      }
-    } else {
-      y += itemBottom
-    }
-    tipElement.style.transform = 'translate(' + x + 'px,' + y + 'px)'
-  }
-
-  function tipHide () {
-    tipElement.style.display = 'none'
-  }
-
-  function tipShown () {
-    return tipElement.style.display !== 'none'
+    detailsElement.innerHTML = `${searchSum} of ${rootNode.total}`
   }
 
   function zoom (node) {
+    focusNode = node
     if (expandNode) {
       expandNode(node)
     }
-    hideSiblings(node)
-    show(node)
-    fadeAncestors(node)
     updateView()
   }
 
