@@ -173,6 +173,7 @@ export default function () {
         if (!node) {
           node = new Node(parentNode, createAggregatedItem(item), name)
           node.roots = [item]
+          node.dir = true
           nodes.set(name, node)
         } else {
           addAggregatedItem(node.item, item)
@@ -327,6 +328,7 @@ export default function () {
     const rootNode = new Node(null, createAggregatedItem(rootItem), getItemName(rootItem))
     rootNode.roots = [rootItem]
     rootNode.children = aggregatedNodesByFlatteningItems(rootNode, rootNode.roots)
+    rootNode.dir = true
     updateFlattenViewNodeValues([rootNode])
     return rootNode
   }
@@ -355,9 +357,9 @@ export default function () {
       this.order = nodesTotalOrder
     }
     layout (rootNode, focusNode, reference) {
-      let node, i, children, childrenY, childrenRow, n, subtotal, ratio, child, childX, childWidth, delta
+      let node, i, children, childrenY, childrenRow, n, directory
+      let subtotal, abstotal, ratio, child, childX, childWidth, delta
       let totalHeight = 0
-      let maxDelta = 0
       const nodes = []
       const totalWidth = this.totalWidth
       const nodeWidthMin = this.nodeWidthMin
@@ -378,25 +380,28 @@ export default function () {
         nodes.push(node)
         totalHeight += rowHeight
       }
-      maxDelta = hasDelta ? Math.abs(node.delta) : 0
+      let maxDelta = hasDelta ? Math.abs(node.delta) : 0
       // Layout branches.
       const queue = [focusNode]
       while ((node = queue.pop())) {
-        childrenY = node.y + rowHeight
         children = node.children
         if (!children || !(n = children.length)) {
-          if (totalHeight < childrenY) {
-            totalHeight = childrenY
-          }
           continue
         }
         if (order) {
           children.sort(order)
         }
+        childrenY = node.y + rowHeight
         childrenRow = node.row + 1
-        subtotal = Math.abs(node.self)
-        for (i = n; i--;) {
-          subtotal += Math.abs(children[i].total)
+        directory = node.dir
+        if (directory) {
+          for (subtotal = 0, i = n; i--;) {
+            subtotal = subtotal < (abstotal = Math.abs(children[i].total)) ? abstotal : subtotal
+          }
+        } else {
+          for (subtotal = Math.abs(node.self), i = n; i--;) {
+            subtotal += Math.abs(children[i].total)
+          }
         }
         ratio = 0 < subtotal ? node.width / subtotal : 0
         for (childX = node.x, i = n; i--;) {
@@ -409,16 +414,23 @@ export default function () {
           child.width = childWidth
           child.x = childX
           child.y = childrenY
-          child.ref = reference
-          nodes.push(child)
-          childX += childWidth
+          if (directory) {
+            childrenY += rowHeight
+          } else {
+            childX += childWidth
+            queue.push(child)
+          }
           if (hasDelta) {
             delta = Math.abs(child.delta)
             if (maxDelta < delta) {
               maxDelta = delta
             }
           }
-          queue.push(child)
+          child.ref = reference
+          nodes.push(child)
+        }
+        if (totalHeight < childrenY) {
+          totalHeight = childrenY
         }
       }
       const result = new HierarchyLayoutResult()
