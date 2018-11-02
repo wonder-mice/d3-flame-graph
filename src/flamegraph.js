@@ -518,21 +518,72 @@ export default function () {
     }
   }
 
+  class TooltipView {
+    constructor (container) {
+      this.shown = false
+      this.nodeTip = null
+      this.element = document.createElement('div')
+      this.element.className = 'tip'
+      container.appendChild(this.element)
+      // Safari is very annoying with its default tooltips for text with ellipsis.
+      // The only way to disable it is to add dummy block element inside.
+      this.deterringElement = document.createElement('div')
+    }
+    show (element, node, context) {
+      const elementRect = element.getBoundingClientRect()
+      const insideRect = element.parentElement.getBoundingClientRect()
+      this.nodeTip.call(this.element, node, context)
+      // Need to reset `display` here, so `getBoundingClientRect()` will actually layout the tip element.
+      this.element.visibility = 'hidden'
+      this.element.style.display = 'unset'
+      const tipRect = this.element.getBoundingClientRect()
+      const clientWidth = document.documentElement.clientWidth
+      const clientHeight = document.documentElement.clientHeight
+      let x = -insideRect.left
+      if (clientWidth < elementRect.left + tipRect.width) {
+        x += clientWidth - tipRect.width
+      } else if (elementRect.left > 0) {
+        x += elementRect.left
+      }
+      let y = -insideRect.top
+      const elementBottom = elementRect.top + elementRect.height
+      const tipBottom = elementBottom + tipRect.height
+      if (clientHeight < tipBottom) {
+        const tipTop = elementRect.top - tipRect.height
+        if (0 <= tipTop || clientHeight - tipBottom < tipTop) {
+          y += tipTop
+        } else {
+          y += elementBottom
+        }
+      } else {
+        y += elementBottom
+      }
+      element.appendChild(this.deterringElement)
+      this.element.style.transform = 'translate(' + x + 'px,' + y + 'px)'
+      this.element.visibility = 'visible'
+      this.shown = true
+    }
+    hide () {
+      if (this.shown) {
+        const deterringParent = this.deterringElement.parentElement
+        if (deterringParent) {
+          deterringParent.removeChild(this.deterringElement)
+        }
+        this.element.style.display = 'none'
+        this.shown = false
+      }
+    }
+  }
+
   const containerElement = document.createElement('div')
   const titleElement = document.createElement('div')
   const nodesSpaceElement = document.createElement('div')
   const nodesElement = document.createElement('div')
-  const tipElement = document.createElement('div')
-  // Safari is very annoying with its default tooltips for text with ellipsis.
-  // The only way to disable it is to add dummy block element inside.
-  const tipDeterringElement = document.createElement('div')
   containerElement.className = 'd3-flame-graph'
   titleElement.className = 'title'
   nodesSpaceElement.className = 'nodes-space'
   nodesElement.className = 'nodes'
-  tipElement.className = 'tip'
   nodesSpaceElement.appendChild(nodesElement)
-  nodesSpaceElement.appendChild(tipElement)
   containerElement.appendChild(titleElement)
   containerElement.appendChild(nodesSpaceElement)
 
