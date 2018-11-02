@@ -597,6 +597,7 @@ export default function () {
   var expandNode = null
   var chartWidth = null
   var chartHeight = null
+  var clickHandler = null
 
   function updateView () {
     const nodesRect = nodesElement.getBoundingClientRect()
@@ -702,176 +703,49 @@ export default function () {
 
   function nodeClick () {
     if (!externalState.textSelected()) {
-      if (tooltip) tipHide()
-      const d = this.__data__
-      zoom(d)
+      tooltipView.hide()
+      const node = this.__node__
+      zoom(node)
       if (clickHandler) {
-        clickHandler.call(this, d)
+        clickHandler.call(this, node)
       }
     }
   }
 
   function nodeMouseOver () {
-    if (tooltip) {
-      this.appendChild(tipDeterringElement)
-      if (!(externalState.shiftKey && tipShown())) {
-        tipShow(this.__data__, this.getBoundingClientRect(), this.parentElement.getBoundingClientRect())
+    if (tooltipView.nodeTip) {
+      if (!(externalState.shiftKey && tooltipView.shown)) {
+        tooltipView.show(this, this.__node__, hierarchyView.context)
       }
     }
   }
 
   function nodeMouseOut () {
-    if (tooltip) {
-      if (tipDeterringElement.parentElement === this) {
-        this.removeChild(tipDeterringElement)
-      }
-      if (!externalState.shiftKey) {
-        tipHide()
-      }
+    if (!externalState.shiftKey) {
+      tooltipView.hide()
     }
   }
 
+  function optionalGetter (getter, on, off) {
+    return typeof getter === 'function' ? getter : (getter ? on : off)
+  }
+
   function chart (element) {
-    titleElement.innerHTML = title
-    nodesElement.style.width = w ? w + 'px' : '100%'
-    nodesElement.style.height = h ? h + 'px' : '100%'
+    nodesElement.style.width = chartWidth ? chartWidth + 'px' : '100%'
+    nodesElement.style.height = chartHeight ? chartHeight + 'px' : '0px'
     element.appendChild(containerElement)
     return chart
   }
 
-  chart.createItemsView = function (datum) {
-    root = createItemViewNode(datum)
-    updateNodeValues = updateItemViewNodeValues
-    expandNode = null
-    updateView()
-    return chart
-  }
-
-  chart.createFlattenView = function (datum) {
-    root = createFlattenViewNode(datum)
-    updateNodeValues = updateFlattenViewNodeValues
-    expandNode = expandFlattenViewNode
-    updateView()
-    return chart
-  }
-
-  chart.updateValues = function () {
-    updateNodeValues([root])
-    updateView()
-    return chart
-  }
-
-  chart.height = function (_) {
-    if (!arguments.length) { return h }
-    h = _
-    return chart
-  }
-
-  chart.width = function (_) {
-    if (!arguments.length) { return w }
-    w = _
-    return chart
-  }
-
-  chart.cellHeight = function (_) {
-    if (!arguments.length) { return cellHeight }
-    cellHeight = _
-    return chart
-  }
-
-  chart.tooltip = function (_) {
-    if (!arguments.length) { return tooltip }
-    tooltip = !!_
-    return chart
-  }
-
-  chart.title = function (_) {
-    if (!arguments.length) { return title }
-    title = _
-    return chart
-  }
-
-  chart.sort = function (_) {
-    if (!arguments.length) { return order }
-    if (typeof _ === 'function') {
-      order = _
-    } else {
-      order = _ ? nodesTotalOrder : null
-    }
-    return chart
-  }
-
-  chart.inverted = function (_) {
-    if (!arguments.length) { return inverted }
-    inverted = _
-    return chart
-  }
-
-  chart.differential = function (_) {
-    if (!arguments.length) { return itemDeltaPresent }
-    itemDeltaPresent = _
-    return chart
-  }
-
-  chart.elided = function (_) {
-    if (!arguments.length) { return elided }
-    elided = _
-    return chart
-  }
-
-  chart.setLabelHandler = function (_) {
-    if (!arguments.length) { return labelHandler }
-    labelHandler = _
-    return chart
-  }
-  // Kept for backwards compatibility.
-  chart.label = chart.setLabelHandler
-
-  chart.search = function (term) {
-    searchTree(root, term)
-    update()
-  }
-
-  chart.clear = function () {
-    searchSum = 0
-    detailsHandler(null)
-    clear(root)
-    update()
-  }
-
-  chart.zoomTo = function (d) {
-    zoom(d)
-  }
-
-  chart.resetZoom = function () {
-    zoom(root)
-  }
-
-  chart.onClick = function (_) {
-    if (!arguments.length) {
-      return clickHandler
-    }
-    clickHandler = _
-    return chart
-  }
-
-  chart.minFrameSize = function (_) {
-    if (!arguments.length) { return minFrameSize }
-    minFrameSize = _
-    return chart
-  }
-
-  chart.setDetailsElement = function (_) {
-    if (!arguments.length) { return detailsElement }
-    detailsElement = _
-    return chart
-  }
-  // Kept for backwards compatibility.
-  chart.details = chart.setDetailsElement
-
   chart.selfValue = function (_) {
-    if (!arguments.length) { return itemValueSelf }
-    itemValueSelf = _
+    if (!arguments.length) { return itemSelfValue }
+    itemSelfValue = _
+    return chart
+  }
+
+  chart.hasDelta = function (_) {
+    if (!arguments.length) { return itemHasDelta }
+    itemHasDelta = _
     return chart
   }
 
@@ -896,12 +770,6 @@ export default function () {
   chart.getItemChildren = function (_) {
     if (!arguments.length) { return getItemChildren }
     getItemChildren = _
-    return chart
-  }
-
-  chart.getItemKind = function (_) {
-    if (!arguments.length) { return getItemKind }
-    getItemKind = _
     return chart
   }
 
@@ -930,14 +798,113 @@ export default function () {
   }
 
   chart.getNodeColor = function (_) {
-    if (!arguments.length) { return getNodeColor }
-    getNodeColor = _ || getNodeColorDefault
+    if (!arguments.length) { return hierarchyView.nodeColor }
+    hierarchyView.nodeColor = _ || getNodeColor
     return chart
   }
 
-  chart.getNodeClass = function (_) {
-    if (!arguments.length) { return getNodeClass }
-    getNodeClass = _
+  chart.getNodeTitle = function (_) {
+    if (!arguments.length) { return hierarchyView.nodeTitle }
+    hierarchyView.nodeTitle = optionalGetter(_, getNodeTitle, null)
+    return chart
+  }
+
+  chart.setNodeContent = function (_) {
+    if (!arguments.length) { return hierarchyView.nodeContent }
+    hierarchyView.nodeContent = _ || setNodeContent
+    return chart
+  }
+
+  chart.setNodeTip = function (_) {
+    if (!arguments.length) { return tooltipView.nodeTip }
+    tooltipView.nodeTip = optionalGetter(_, setNodeTip, null)
+    return chart
+  }
+
+  chart.cellHeight = function (_) {
+    if (!arguments.length) { return hierarchyLayout.rowHeight }
+    hierarchyLayout.rowHeight = _
+    return chart
+  }
+
+  chart.cellWidthMin = function (_) {
+    if (!arguments.length) { return hierarchyLayout.nodeWidthMin }
+    hierarchyLayout.nodeWidthMin = _
+    return chart
+  }
+
+  chart.sort = function (_) {
+    if (!arguments.length) { return hierarchyLayout.order }
+    hierarchyLayout.order = optionalGetter(_, nodesTotalOrder, null)
+    return chart
+  }
+
+  chart.inverted = function (_) {
+    if (!arguments.length) { return hierarchyView.inverted }
+    hierarchyView.inverted = _
+    return chart
+  }
+
+  chart.title = function (_) {
+    if (!arguments.length) { return titleElement.innerHTML }
+    titleElement.innerHTML = _
+    return chart
+  }
+
+  chart.height = function (_) {
+    if (!arguments.length) { return chartHeight }
+    chartHeight = _
+    return chart
+  }
+
+  chart.width = function (_) {
+    if (!arguments.length) { return chartWidth }
+    chartWidth = _
+    return chart
+  }
+
+  chart.createItemsView = function (datum) {
+    if (rootNode) {
+      hierarchyView.recycle([rootNode])
+    }
+    focusNode = rootNode = createItemViewNode(datum)
+    updateNodeValues = updateItemViewNodeValues
+    expandNode = null
+    updateView()
+    return chart
+  }
+
+  chart.createFlattenView = function (datum) {
+    if (rootNode) {
+      hierarchyView.recycle([rootNode])
+    }
+    focusNode = rootNode = createFlattenViewNode(datum)
+    updateNodeValues = updateFlattenViewNodeValues
+    expandNode = expandFlattenViewNode
+    updateView()
+    return chart
+  }
+
+  chart.updateValues = function () {
+    updateNodeValues([rootNode])
+    updateView()
+    return chart
+  }
+
+  }
+
+  }
+
+  chart.onClick = function (_) {
+    if (!arguments.length) { return clickHandler }
+    clickHandler = _
+    return chart
+  }
+
+  }
+
+  }
+
     return chart
   }
 
