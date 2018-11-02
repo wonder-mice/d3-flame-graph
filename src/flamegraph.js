@@ -444,6 +444,79 @@ export default function () {
     }
   }
 
+  class HierarchyView {
+    constructor (container) {
+      this.container = container
+      this.nodeColor = getNodeColor
+      this.nodeTitle = null
+      this.nodeContent = setNodeContent
+      this.inverted = false
+      this.context = null
+      this.nodes = null
+      this.reference = false // Any alternating value will work, could use incremented integer instead.
+      this.unusedElements = []
+    }
+    render (layout) {
+      let nodes, i, node, element
+      const unusedElements = this.unusedElements
+      if ((nodes = this.nodes) && this.reference !== layout.reference) {
+        // Hide currently visible elements that don't have their node in `layout`.
+        const reference = layout.reference
+        for (i = nodes.length; i--;) {
+          node = nodes[i]
+          if (node.ref !== reference) {
+            node.element.style.display = 'none'
+          }
+        }
+      }
+      const container = this.container
+      const nodeColor = this.nodeColor
+      const nodeTitle = this.nodeTitle
+      const nodeContent = this.nodeContent
+      const fixY = this.inverted ? layout.height - layout.rowHeight : 0
+      const context = this.context = layout.context
+      this.nodes = nodes = layout.nodes
+      this.reference = layout.reference
+      for (i = nodes.length; i--;) {
+        element = (node = nodes[i]).element
+        if (!element) {
+          if (!(element = unusedElements.pop())) {
+            element = document.createElement('div')
+            element.addEventListener('click', nodeClick)
+            element.addEventListener('mouseover', nodeMouseOver)
+            element.addEventListener('mouseout', nodeMouseOut)
+            container.appendChild(element)
+          }
+          node.element = element
+          element.__node__ = node
+        }
+        element.style.width = node.width + 'px'
+        element.style.left = node.x + 'px'
+        element.style.top = Math.abs(node.y - fixY) + 'px'
+        element.style.backgroundColor = nodeColor(node, context)
+        element.title = nodeTitle ? nodeTitle(node, context) : ''
+        nodeContent.call(element, node, context)
+        element.style.display = 'unset'
+      }
+      this.nodes = nodes
+    }
+    recycle (roots) {
+      let nodes, i, node, element, children
+      const queue = [roots]
+      while ((nodes = queue.pop())) {
+        for (i = nodes.length; i--;) {
+          node = nodes[i]
+          if ((element = node.element)) {
+            element.__node__ = null
+            this.unusedElements.push(element)
+          }
+          if ((children = node.children)) {
+            queue.push(children)
+          }
+        }
+      }
+    }
+  }
 
   const containerElement = document.createElement('div')
   const titleElement = document.createElement('div')
