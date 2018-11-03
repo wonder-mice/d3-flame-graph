@@ -3,12 +3,6 @@
   width: 100%;
 }
 
-.d3-flame-graph .title {
-  font-size: 20px;
-  font-family: Verdana;
-  color: #808080
-}
-
 .d3-flame-graph .nodes, .nodes-space {
   position: relative;
 }
@@ -48,8 +42,12 @@
   opacity: 0.6;
 }
 
-.d3-flame-graph .highlight {
-  border: 1px solid blue;
+.d3-flame-graph .mark1 {
+  border: 1px solid rgb(0, 0, 255);
+}
+
+.d3-flame-graph .mark2 {
+  border: 1px solid rgb(128, 128, 255);
 }
 
 .d3-flame-graph .tip {

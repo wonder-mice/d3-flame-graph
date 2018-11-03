@@ -48,6 +48,7 @@ export default function () {
     this.parent = parent
     this.item = item
     this.name = name
+    this.mark = 0
   }
 
   function NodeContext () {
@@ -58,8 +59,9 @@ export default function () {
   var nodeWidthSmall = 35
   var nodeClassBase = 'node'
   var nodeClassBaseSmall = 'node-sm'
-  var nodeClassStem = ' stem'
-  var nodeClassHighlight = ' stem'
+  var nodeClassStem = 'stem'
+  var nodeClassMark1 = 'mark1'
+  var nodeClassMark2 = 'mark2'
 
   function getNodeColor (node, context) {
     let r, g, b
@@ -107,13 +109,47 @@ export default function () {
     const small = node.width <= nodeWidthSmall
     let classes = small ? nodeClassBaseSmall : nodeClassBase
     if (node.row < 0) { classes += ' ' + nodeClassStem }
-    if (node.highlight) { classes += ' ' + nodeClassHighlight }
+    if (node.mark & 1) { classes += ' ' + nodeClassMark1 }
+    if (node.mark & 4) { classes += ' ' + nodeClassMark2 }
     this.className = classes
     this.textContent = small ? '' : node.name
   }
 
   function setNodeTip (node, context) {
     this.innerText = getNodeTitle(node, context)
+  }
+
+  // Field `node.mark` is a bitmask:
+  //   (mark & 1) - node is marked
+  //   (mark & 2) - node has a descendant that is marked
+  //   (mark & 4) - node has a descendant that is marked, but can't be displayed (e.g. too small)
+  function markNodes (roots, nest, term) {
+    let nodes, i, node, children, ancestor
+    const queue = [roots]
+    const marked = []
+    while ((nodes = queue.pop())) {
+      for (i = nodes.length; i--;) {
+        node = nodes[i]
+        if (!term) {
+          if (!node.mark) { continue }
+          node.mark = 0
+        } else if (!term(node)) {
+          node.mark = 0
+        } else {
+          node.mark = 1
+          for (ancestor = node.parent; ancestor && !ancestor.mark; ancestor = ancestor.parent) {
+            ancestor.mark |= 2
+          }
+          marked.push(node)
+          if (!nest) { continue }
+        }
+        children = node.children
+        if (children && children.length) {
+          queue.push(children)
+        }
+      }
+    }
+    return marked
   }
 
   // Keeps track of current callstack frames and facilitates recursion detection.
@@ -376,6 +412,7 @@ export default function () {
         node.width = totalWidth
         node.x = 0
         node.y = totalHeight
+        node.mark &= 3
         node.ref = reference
         nodes.push(node)
         totalHeight += rowHeight
@@ -406,8 +443,11 @@ export default function () {
         ratio = 0 < subtotal ? node.width / subtotal : 0
         for (childX = node.x, i = n; i--;) {
           child = children[i]
-          childWidth = Math.abs(child.total) * ratio
+          childWidth = Math.floor(Math.abs(child.total) * ratio)
           if (childWidth < nodeWidthMin) {
+            if (child.mark & 2) {
+              node.mark |= 4
+            }
             continue
           }
           child.row = childrenRow
@@ -426,6 +466,7 @@ export default function () {
               maxDelta = delta
             }
           }
+          node.mark &= 3
           child.ref = reference
           nodes.push(child)
         }
@@ -576,15 +617,12 @@ export default function () {
   }
 
   const containerElement = document.createElement('div')
-  const titleElement = document.createElement('div')
   const nodesSpaceElement = document.createElement('div')
   const nodesElement = document.createElement('div')
   containerElement.className = 'd3-flame-graph'
-  titleElement.className = 'title'
   nodesSpaceElement.className = 'nodes-space'
   nodesElement.className = 'nodes'
   nodesSpaceElement.appendChild(nodesElement)
-  containerElement.appendChild(titleElement)
   containerElement.appendChild(nodesSpaceElement)
 
   const hierarchyLayout = new HierarchyLayout()
@@ -628,77 +666,12 @@ export default function () {
   }
   externalState.listen()
 
-  var searchHandler = function () {
-    if (detailsElement) { setSearchDetails() }
-  }
-  var originalSearchHandler = searchHandler
-
-  var detailsHandler = function (d) {
-    if (detailsElement) {
-      if (d) {
-        detailsElement.innerHTML = d
-      } else {
-        if (searchSum) {
-          setSearchDetails()
-        } else {
-          detailsElement.innerHTML = ''
-        }
-      }
-    }
-  }
-  var originalDetailsHandler = detailsHandler
-
-  function setSearchDetails () {
-    detailsElement.innerHTML = `${searchSum} of ${rootNode.total}`
-  }
-
   function zoom (node) {
     focusNode = node
     if (expandNode) {
       expandNode(node)
     }
     updateView()
-  }
-
-  function searchTree (d, term) {
-    var re = new RegExp(term)
-    var results = []
-    var sum = 0
-
-    function searchInner (d, foundParent) {
-      var label = getItemName(d.data)
-      var found = false
-
-      if (typeof label !== 'undefined' && label && label.match(re)) {
-        d.highlight = true
-        found = true
-        if (!foundParent) {
-          sum += d.value
-        }
-        results.push(d)
-      } else {
-        d.highlight = false
-      }
-
-      if (d.children) {
-        d.children.forEach(function (child) {
-          searchInner(child, (foundParent || found))
-        })
-      }
-    }
-
-    searchInner(d, false)
-    searchSum = sum
-    searchHandler(results, sum, totalValue)
-  }
-
-  function clear (d) {
-    d.highlight = false
-    if (d.children) {
-      d.children.forEach(function (child) {
-        clear(child)
-      })
-    }
   }
 
   function nodeClick () {
@@ -845,12 +818,6 @@ export default function () {
     return chart
   }
 
-  chart.title = function (_) {
-    if (!arguments.length) { return titleElement.innerHTML }
-    titleElement.innerHTML = _
-    return chart
-  }
-
   chart.height = function (_) {
     if (!arguments.length) { return chartHeight }
     chartHeight = _
@@ -891,8 +858,17 @@ export default function () {
     return chart
   }
 
+  chart.search = function (term) {
+    const re = new RegExp(term)
+    markNodes([rootNode], true, function (node) {
+      return re.test(node.name)
+    })
+    updateView()
   }
 
+  chart.clear = function () {
+    markNodes([rootNode], true, null)
+    updateView()
   }
 
   chart.onClick = function (_) {
@@ -901,29 +877,12 @@ export default function () {
     return chart
   }
 
+  chart.zoomTo = function (node) {
+    zoom(node)
   }
 
-  }
-
-    return chart
-  }
-
-  chart.setSearchHandler = function (_) {
-    if (!arguments.length) {
-      searchHandler = originalSearchHandler
-      return chart
-    }
-    searchHandler = _
-    return chart
-  }
-
-  chart.setDetailsHandler = function (_) {
-    if (!arguments.length) {
-      detailsHandler = originalDetailsHandler
-      return chart
-    }
-    detailsHandler = _
-    return chart
+  chart.resetZoom = function () {
+    zoom(rootNode)
   }
 
   return chart
