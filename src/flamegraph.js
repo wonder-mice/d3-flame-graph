@@ -87,7 +87,8 @@ export default function () {
       // Use of HSL colorspace would be more appropriate, since its saturation better models
       // kind of effect we are after. However, HSV colorspace is computationaly simpler and
       // we can emulate desired effect by adjusting brightness (value) based on `s`.
-      return hsv2rbg(0 <= delta ? 0 : 0.67, s, 0.7 + 0.3 * s)
+      // return hsv2rbg(0 <= delta ? 0 : 0.67, s, 0.7 + 0.3 * s)
+      return hsv2rbg(0 <= delta ? 0 : 0.28, s, 0.8 + 0.2 * s)
     }
     let tone = 0
     const name = node.name
