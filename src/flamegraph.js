@@ -138,24 +138,22 @@ export default function () {
   //   (mark & 4) - node has an ancestor that is marked
   //   (mark & 8) - node has marked descendants that are not visible (e.g. too small)
   function markNodes (roots, term) {
-    let nodes, i, node, children, ancestor, mark
+    let nodes, i, node, children, ancestor
     const queue = [roots]
     const marked = []
     while ((nodes = queue.pop())) {
       for (i = nodes.length; i--;) {
         node = nodes[i]
         ancestor = node.parent
-        // Preserve higher bits (not required, but not hard and can be convenient) and reset
-        // bits 1, 2 and 4 to 0. Set bit 4 if parent node is marked or has a marked ancestor.
-        mark = (node.mark & 0xf8) | ((ancestor && (ancestor.mark & 0x5)) ? 4 : 0)
         if (term && term(node)) {
           marked.push(node)
-          mark |= 1
+          node.mark = ancestor && (ancestor.mark & 0x5) ? 5 : 1
           for (; ancestor && !(ancestor.mark & 2); ancestor = ancestor.parent) {
             ancestor.mark |= 2
           }
+        } else {
+          node.mark = ancestor && (ancestor.mark & 0x5) ? 4 : 0
         }
-        node.mark = mark
         children = node.children
         if (children && children.length) {
           queue.push(children)
