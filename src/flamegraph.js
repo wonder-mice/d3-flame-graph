@@ -78,7 +78,7 @@ export default function () {
   var nodeClassBase = 'node'
   var nodeClassBaseSmall = 'node-sm'
   var nodeClassStem = 'stem'
-  var nodeClassMarked = 'marked'
+  var nodeClassMarked = 'mark-'
 
   function getNodeColor (node, context) {
     if (context.hasDelta) {
@@ -123,7 +123,8 @@ export default function () {
     const small = node.width <= nodeWidthSmall
     let classes = small ? nodeClassBaseSmall : nodeClassBase
     if (node.row < 0) { classes += ' ' + nodeClassStem }
-    if (node.mark & 9) { classes += ' ' + nodeClassMarked }
+    const mark = node.mark & 0x9
+    if (mark & 0x9) { classes += ' ' + nodeClassMarked + mark }
     this.className = classes
     this.textContent = small ? '' : node.name
   }
