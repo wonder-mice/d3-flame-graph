@@ -56,6 +56,24 @@ export default function () {
     this.maxDelta = 0
   }
 
+  function hsv2rbg (h, s, v) {
+    const i = Math.floor(h * 6)
+    const f = h * 6 - i
+    const p = v * (1 - s)
+    const q = v * (1 - f * s)
+    const t = v * (1 - (1 - f) * s)
+    let r, g, b
+    switch (i % 6) {
+      case 0: r = v; g = t; b = p; break
+      case 1: r = q; g = v; b = p; break
+      case 2: r = p; g = v; b = t; break
+      case 3: r = p; g = q; b = v; break
+      case 4: r = t; g = p; b = v; break
+      case 5: r = v; g = p; b = q; break
+    }
+    return 'rgb(' + Math.round(r * 255) + ',' + Math.round(g * 255) + ',' + Math.round(b * 255) + ')'
+  }
+
   var nodeWidthSmall = 35
   var nodeClassBase = 'node'
   var nodeClassBaseSmall = 'node-sm'
@@ -63,36 +81,32 @@ export default function () {
   var nodeClassMarked = 'marked'
 
   function getNodeColor (node, context) {
-    let r, g, b
     if (context.hasDelta) {
       const delta = node.delta || 0
-      const maxDelta = context.maxDelta
-      r = g = b = 220
-      if (delta > 0) {
-        g = b = Math.round(210 * (maxDelta - delta) / maxDelta)
-      } else if (delta < 0) {
-        g = r = Math.round(210 * (maxDelta + delta) / maxDelta)
-      }
-    } else {
-      let tone = 0
-      const name = node.name
-      if (name) {
-        const maxLength = 6
-        const n = maxLength < name.length ? maxLength : name.length
-        const mod = 10
-        let range = 0
-        for (let i = 0, weight = 1; i < n; ++i, weight *= 0.7) {
-          tone += weight * (name.charCodeAt(i) % mod)
-          range += weight * (mod - 1)
-        }
-        if (range > 0) {
-          tone /= range
-        }
-      }
-      r = 200 + Math.round(55 * tone)
-      g = 0 + Math.round(230 * (1 - tone))
-      b = 0 + Math.round(55 * (1 - tone))
+      const s = Math.abs(delta / context.maxDelta)
+      // Use of HSL colorspace would be more appropriate, since its saturation better models
+      // kind of effect we are after. However, HSV colorspace is computationaly simpler and
+      // we can emulate desired effect by adjusting brightness (value) based on `s`.
+      return hsv2rbg(0 <= delta ? 0 : 0.67, s, 0.7 + 0.3 * s)
     }
+    let tone = 0
+    const name = node.name
+    if (name) {
+      const maxLength = 6
+      const n = maxLength < name.length ? maxLength : name.length
+      const mod = 10
+      let range = 0
+      for (let i = 0, weight = 1; i < n; ++i, weight *= 0.7) {
+        tone += weight * (name.charCodeAt(i) % mod)
+        range += weight * (mod - 1)
+      }
+      if (range > 0) {
+        tone /= range
+      }
+    }
+    const r = 200 + Math.round(55 * tone)
+    const g = Math.round(230 * (1 - tone))
+    const b = Math.round(55 * (1 - tone))
     return 'rgb(' + r + ',' + g + ',' + b + ')'
   }
 
