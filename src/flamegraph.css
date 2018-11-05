@@ -42,20 +42,23 @@
   opacity: 0.6;
 }
 
+/* Node is marked. */
 .d3-flame-graph .mark-1 {
   border: 1px solid #0751B9;
   box-shadow: inset 0 2px #0751B9;
 }
 
+/* Node has a marked descendant that is not visible (e.g. too small). */
 .d3-flame-graph .mark-8 {
-  border: 1px solid #0751B9;
-  box-shadow: inset 0 -2px #0751B9;
+  border: 1px solid #7B42B1;
+  box-shadow: inset 0 -2px #7B42B1;
 }
 
+/* Node is marked AND has a marked descendant that is not visible. */
 .d3-flame-graph .mark-9 {
   border: 1px solid #0751B9;
-  box-shadow: inset 0 -2px #0751B9;
   box-shadow: inset 0 2px #0751B9;
+  box-shadow: inset 0 -2px #7B42B1;
 }
 
 .d3-flame-graph .tip {
