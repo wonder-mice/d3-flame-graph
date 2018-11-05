@@ -60,8 +60,7 @@ export default function () {
   var nodeClassBase = 'node'
   var nodeClassBaseSmall = 'node-sm'
   var nodeClassStem = 'stem'
-  var nodeClassMark1 = 'mark1'
-  var nodeClassMark2 = 'mark2'
+  var nodeClassMarked = 'marked'
 
   function getNodeColor (node, context) {
     let r, g, b
@@ -109,8 +108,7 @@ export default function () {
     const small = node.width <= nodeWidthSmall
     let classes = small ? nodeClassBaseSmall : nodeClassBase
     if (node.row < 0) { classes += ' ' + nodeClassStem }
-    if (node.mark & 1) { classes += ' ' + nodeClassMark1 }
-    if (node.mark & 4) { classes += ' ' + nodeClassMark2 }
+    if (node.mark & 9) { classes += ' ' + nodeClassMarked }
     this.className = classes
     this.textContent = small ? '' : node.name
   }
@@ -122,27 +120,27 @@ export default function () {
   // Field `node.mark` is a bitmask:
   //   (mark & 1) - node is marked
   //   (mark & 2) - node has a descendant that is marked
-  //   (mark & 4) - node has a descendant that is marked, but can't be displayed (e.g. too small)
-  function markNodes (roots, nest, term) {
-    let nodes, i, node, children, ancestor
+  //   (mark & 4) - node has an ancestor that is marked
+  //   (mark & 8) - node has marked descendants that are not visible (e.g. too small)
+  function markNodes (roots, term) {
+    let nodes, i, node, children, ancestor, mark
     const queue = [roots]
     const marked = []
     while ((nodes = queue.pop())) {
       for (i = nodes.length; i--;) {
         node = nodes[i]
-        if (!term) {
-          if (!node.mark) { continue }
-          node.mark = 0
-        } else if (!term(node)) {
-          node.mark = 0
-        } else {
-          node.mark = 1
-          for (ancestor = node.parent; ancestor && !ancestor.mark; ancestor = ancestor.parent) {
+        ancestor = node.parent
+        // Preserve higher bits (not required, but not hard and can be convenient) and reset
+        // bits 1, 2 and 4 to 0. Set bit 4 if parent node is marked or has a marked ancestor.
+        mark = (node.mark & 0xf8) | ((ancestor && (ancestor.mark & 0x5)) ? 4 : 0)
+        if (term && term(node)) {
+          marked.push(node)
+          mark |= 1
+          for (; ancestor && !(ancestor.mark & 2); ancestor = ancestor.parent) {
             ancestor.mark |= 2
           }
-          marked.push(node)
-          if (!nest) { continue }
         }
+        node.mark = mark
         children = node.children
         if (children && children.length) {
           queue.push(children)
@@ -412,7 +410,7 @@ export default function () {
         node.width = totalWidth
         node.x = 0
         node.y = totalHeight
-        node.mark &= 3
+        node.mark &= 0xf7
         node.ref = reference
         nodes.push(node)
         totalHeight += rowHeight
@@ -445,8 +443,8 @@ export default function () {
           child = children[i]
           childWidth = Math.floor(Math.abs(child.total) * ratio)
           if (childWidth < nodeWidthMin) {
-            if (child.mark & 2) {
-              node.mark |= 4
+            if (child.mark & 3) {
+              node.mark |= 8
             }
             continue
           }
@@ -466,7 +464,7 @@ export default function () {
               maxDelta = delta
             }
           }
-          node.mark &= 3
+          node.mark &= 0xf7
           child.ref = reference
           nodes.push(child)
         }
@@ -860,14 +858,14 @@ export default function () {
 
   chart.search = function (term) {
     const re = new RegExp(term)
-    markNodes([rootNode], true, function (node) {
+    markNodes([rootNode], function (node) {
       return re.test(node.name)
     })
     updateView()
   }
 
   chart.clear = function () {
-    markNodes([rootNode], true, null)
+    markNodes([rootNode], null)
     updateView()
   }
 
