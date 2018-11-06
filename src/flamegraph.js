@@ -48,7 +48,14 @@ export default function () {
     this.parent = parent
     this.item = item
     this.name = name
+    // (mark & 0b0001) - node is marked
+    // (mark & 0b0010) - node has a descendant that is marked
+    // (mark & 0b0100) - node has an ancestor that is marked
+    // (mark & 0b1000) - node has marked descendants that are not visible (e.g. too small)
     this.mark = 0
+    // (bits & 0b10) - node is on the path from focused node to the root
+    // (bits & 0b11) - node is fucesed
+    this.bits = 0
   }
 
   function NodeContext () {
@@ -122,9 +129,9 @@ export default function () {
   function setNodeContent (node, context) {
     const small = node.width <= nodeWidthSmall
     let classes = small ? nodeClassBaseSmall : nodeClassBase
-    const focus = node.mark & 0b110000
-    if (focus) { classes += ' ' + nodeClassFocus + (focus >>> 4) }
-    const mark = node.mark & 0b111
+    const focus = node.bits & 0b11
+    if (focus) { classes += ' ' + nodeClassFocus + focus }
+    const mark = node.mark & 0b1001
     if (mark) { classes += ' ' + nodeClassMarked + mark }
     this.className = classes
     this.textContent = small ? '' : node.name
@@ -134,13 +141,6 @@ export default function () {
     this.innerText = getNodeTitle(node, context)
   }
 
-  // Field `node.mark` is a bitmask:
-  //   (mark & 1) - node is marked
-  //   (mark & 2) - node has a descendant that is marked
-  //   (mark & 4) - node has an ancestor that is marked
-  //   (mark & 8) - node has marked descendants that are not visible (e.g. too small)
-  //   (mark & 16) - node is focused
-  //   (mark & 32) - node is on the path from focused node to the root
   function markNodes (roots, term) {
     let nodes, i, node, children, ancestor
     const queue = [roots]
@@ -151,12 +151,12 @@ export default function () {
         ancestor = node.parent
         if (term && term(node)) {
           marked.push(node)
-          node.mark = ancestor && (ancestor.mark & 0x5) ? 5 : 1
-          for (; ancestor && !(ancestor.mark & 2); ancestor = ancestor.parent) {
-            ancestor.mark |= 2
+          node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0101 : 0b0001
+          for (; ancestor && !(ancestor.mark & 0b0010); ancestor = ancestor.parent) {
+            ancestor.mark |= 0b0010
           }
         } else {
-          node.mark = ancestor && (ancestor.mark & 0x5) ? 4 : 0
+          node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0100 : 0b0000
         }
         children = node.children
         if (children && children.length) {
@@ -426,7 +426,8 @@ export default function () {
         node.width = totalWidth
         node.x = 0
         node.y = totalHeight
-        node.mark = (node.mark & 0b11000111) | (0 === i ? 0b00110000 : 0b00100000)
+        node.mark &= 0b0111
+        node.bits = (node.bits & 0b11111100) | (0 === i ? 0b11 : 0b10)
         node.ref = reference
         nodes.push(node)
         totalHeight += rowHeight
@@ -458,8 +459,8 @@ export default function () {
           child = children[i]
           childWidth = Math.floor(Math.abs(child.total) * ratio)
           if (childWidth < nodeWidthMin) {
-            if (child.mark & 3) {
-              node.mark |= 8
+            if (child.mark & 0b0011) {
+              node.mark |= 0b1000
             }
             continue
           }
@@ -478,7 +479,8 @@ export default function () {
               maxDelta = delta
             }
           }
-          child.mark &= 0b11000111
+          child.mark &= 0b0111
+          child.bits &= 0b11111100
           child.ref = reference
           nodes.push(child)
         }
