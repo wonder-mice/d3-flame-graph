@@ -88,7 +88,7 @@ export default function () {
   var nodeClassMarked = 'mark-'
 
   function getNodeColor (node, context) {
-    if (context.hasDelta) {
+    if (context.hasDelta && context.maxDelta) {
       const delta = node.delta || 0
       const s = Math.abs(delta / context.maxDelta)
       // Use of HSL colorspace would be more appropriate, since its saturation better models
