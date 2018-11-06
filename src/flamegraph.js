@@ -77,7 +77,7 @@ export default function () {
   var nodeWidthSmall = 35
   var nodeClassBase = 'node'
   var nodeClassBaseSmall = 'node-sm'
-  var nodeClassStem = 'stem'
+  var nodeClassFocus = 'focus-'
   var nodeClassMarked = 'mark-'
 
   function getNodeColor (node, context) {
@@ -122,9 +122,10 @@ export default function () {
   function setNodeContent (node, context) {
     const small = node.width <= nodeWidthSmall
     let classes = small ? nodeClassBaseSmall : nodeClassBase
-    if (node.row < 0) { classes += ' ' + nodeClassStem }
-    const mark = node.mark & 0x9
-    if (mark & 0x9) { classes += ' ' + nodeClassMarked + mark }
+    const focus = node.mark & 0b110000
+    if (focus) { classes += ' ' + nodeClassFocus + (focus >>> 4) }
+    const mark = node.mark & 0b111
+    if (mark) { classes += ' ' + nodeClassMarked + mark }
     this.className = classes
     this.textContent = small ? '' : node.name
   }
@@ -138,6 +139,8 @@ export default function () {
   //   (mark & 2) - node has a descendant that is marked
   //   (mark & 4) - node has an ancestor that is marked
   //   (mark & 8) - node has marked descendants that are not visible (e.g. too small)
+  //   (mark & 16) - node is focused
+  //   (mark & 32) - node is on the path from focused node to the root
   function markNodes (roots, term) {
     let nodes, i, node, children, ancestor
     const queue = [roots]
@@ -405,7 +408,7 @@ export default function () {
       this.order = nodesTotalOrder
     }
     layout (rootNode, focusNode, reference) {
-      let node, i, children, childrenY, childrenRow, n, directory
+      let node, i, children, childrenY, n, directory
       let subtotal, abstotal, ratio, child, childX, childWidth, delta
       let totalHeight = 0
       const nodes = []
@@ -420,11 +423,10 @@ export default function () {
       do { stemNodes.push(node) } while ((node = node.parent))
       for (i = stemNodes.length; i--;) {
         node = stemNodes[i]
-        node.row = 0 - i
         node.width = totalWidth
         node.x = 0
         node.y = totalHeight
-        node.mark &= 0xf7
+        node.mark = (node.mark & 0b11000111) | (0 === i ? 0b00110000 : 0b00100000)
         node.ref = reference
         nodes.push(node)
         totalHeight += rowHeight
@@ -441,7 +443,6 @@ export default function () {
           children.sort(order)
         }
         childrenY = node.y + rowHeight
-        childrenRow = node.row + 1
         directory = node.dir
         if (directory) {
           for (subtotal = 0, i = n; i--;) {
@@ -462,7 +463,6 @@ export default function () {
             }
             continue
           }
-          child.row = childrenRow
           child.width = childWidth
           child.x = childX
           child.y = childrenY
@@ -478,7 +478,7 @@ export default function () {
               maxDelta = delta
             }
           }
-          node.mark &= 0xf7
+          child.mark &= 0b11000111
           child.ref = reference
           nodes.push(child)
         }
