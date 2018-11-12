@@ -873,10 +873,20 @@ export default function () {
   }
 
   chart.search = function (term) {
-    const re = new RegExp(term)
-    markNodes([rootNode], function (node) {
-      return re.test(node.name)
-    })
+    if (typeof term !== 'function') {
+      term = String(term)
+      if (term.startsWith('#')) {
+        const str = term.slice(1)
+        term = function (node) { return node.name === str }
+      } else if (1 < term.length && ('"' === term[0] || '\'' === term[0]) && term[0] === term[term.length - 1]) {
+        const str = term.slice(1, -1)
+        term = function (node) { return node.name.includes(str) }
+      } else {
+        const re = new RegExp(term)
+        term = function (node) { return re.test(node.name) }
+      }
+    }
+    markNodes([rootNode], term)
     updateView()
   }
 
