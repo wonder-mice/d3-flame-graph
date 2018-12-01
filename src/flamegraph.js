@@ -540,6 +540,7 @@ export default function () {
             element.addEventListener('click', nodeClick)
             element.addEventListener('mouseover', nodeMouseOver)
             element.addEventListener('mouseout', nodeMouseOut)
+            element.addEventListener('mousemove', nodeMouseMove)
             container.appendChild(element)
           }
           node.element = element
@@ -579,12 +580,14 @@ export default function () {
       this.nodeTip = null
       this.element = document.createElement('div')
       this.element.className = 'tip'
+      this.tipDx = 0
+      this.tipDy = 0
       container.appendChild(this.element)
       // Safari is very annoying with its default tooltips for text with ellipsis.
       // The only way to disable it is to add dummy block element inside.
       this.deterringElement = document.createElement('div')
     }
-    show (element, node, context) {
+    show (event, element, node, context) {
       const elementRect = element.getBoundingClientRect()
       const insideRect = element.parentElement.getBoundingClientRect()
       this.nodeTip.call(this.element, node, context)
@@ -594,25 +597,21 @@ export default function () {
       const tipRect = this.element.getBoundingClientRect()
       const clientWidth = document.documentElement.clientWidth
       const clientHeight = document.documentElement.clientHeight
-      let x = -insideRect.left
-      if (clientWidth < elementRect.left + tipRect.width) {
-        x += clientWidth - tipRect.width
-      } else if (elementRect.left > 0) {
-        x += elementRect.left
+      const px = event.clientX
+      const py = event.clientY
+      const pd = elementRect.height
+      let x = px + pd
+      let y = py + pd
+      if (clientWidth < x + tipRect.width) {
+        x = clientWidth - tipRect.width
       }
-      let y = -insideRect.top
-      const elementBottom = elementRect.top + elementRect.height
-      const tipBottom = elementBottom + tipRect.height
-      if (clientHeight < tipBottom) {
-        const tipTop = elementRect.top - tipRect.height
-        if (0 <= tipTop || clientHeight - tipBottom < tipTop) {
-          y += tipTop
-        } else {
-          y += elementBottom
-        }
-      } else {
-        y += elementBottom
+      if (clientHeight < y + tipRect.height) {
+        y = py - pd - tipRect.height
       }
+      x -= insideRect.left
+      y -= insideRect.top
+      this.tipDx = px - x
+      this.tipDy = py - y
       element.appendChild(this.deterringElement)
       this.element.style.transform = 'translate(' + x + 'px,' + y + 'px)'
       this.element.visibility = 'visible'
@@ -626,6 +625,13 @@ export default function () {
         }
         this.element.style.display = 'none'
         this.shown = false
+      }
+    }
+    update (event) {
+      if (this.shown) {
+        const x = event.clientX - this.tipDx
+        const y = event.clientY - this.tipDy
+        this.element.style.transform = 'translate(' + x + 'px,' + y + 'px)'
       }
     }
   }
@@ -699,17 +705,23 @@ export default function () {
     }
   }
 
-  function nodeMouseOver () {
+  function nodeMouseOver (event) {
     if (tooltipView.nodeTip) {
       if (!(externalState.shiftKey && tooltipView.shown)) {
-        tooltipView.show(this, this.__node__, hierarchyView.context)
+        tooltipView.show(event, this, this.__node__, hierarchyView.context)
       }
     }
   }
 
-  function nodeMouseOut () {
+  function nodeMouseOut (event) {
     if (!externalState.shiftKey) {
       tooltipView.hide()
+    }
+  }
+
+  function nodeMouseMove (event) {
+    if (!externalState.shiftKey && tooltipView.shown) {
+      tooltipView.update(event)
     }
   }
 
