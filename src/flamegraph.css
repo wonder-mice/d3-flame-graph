@@ -82,3 +82,8 @@
   color: #fff;
   border-radius: 2px;
 }
+
+.d3-flame-graph .search {
+  display: none;
+  margin-bottom: 8px;
+}

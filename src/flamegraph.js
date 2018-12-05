@@ -63,6 +63,43 @@ export default function () {
     this.maxDelta = 0
   }
 
+  function markingPredicate (term) {
+    if (!term) {
+      return null
+    }
+    if (typeof term === 'function') {
+      return term
+    }
+    term = String(term)
+    if (!term.length) {
+      return null
+    } else if (term.startsWith('#')) {
+      const str = term.slice(1)
+      return function (node) { return node.name === str }
+    } else if (1 < term.length && ('"' === term[0] || '\'' === term[0]) && term[0] === term[term.length - 1]) {
+      const str = term.slice(1, -1)
+      return function (node) { return node.name.includes(str) }
+    }
+    const re = new RegExp(term)
+    return function (node) { return re.test(node.name) }
+  }
+
+  function markedAggregate (marked) {
+    let aggregated = null
+    let node
+    for (let i = marked.length; i--;) {
+      node = marked[i]
+      if (itemSelfValue || !(node.mark & 0b0100)) {
+        if (aggregated) {
+          addAggregatedItem(aggregated, node.item)
+        } else {
+          aggregated = createAggregatedItem(node.item)
+        }
+      }
+    }
+    return aggregated
+  }
+
   function hsv2rbg (h, s, v) {
     const i = Math.floor(h * 6)
     const f = h * 6 - i
@@ -141,7 +178,25 @@ export default function () {
     this.innerText = getNodeTitle(node, context)
   }
 
-  function markNodes (roots, term) {
+  function setSearchContent (marked, aggregated, markedFocus, aggregatedFocus) {
+    let html = 'Total: ' + marked.length + ' items'
+    if (aggregated) {
+      html += ', value=' + getAggregatedItemValue(aggregated)
+      if (itemHasDelta) {
+        html += ', delta=' + getAggregatedItemDelta(aggregated)
+      }
+    }
+    html += '; Focus: ' + markedFocus.length + ' items'
+    if (aggregatedFocus) {
+      html += ', value=' + getAggregatedItemValue(aggregatedFocus)
+      if (itemHasDelta) {
+        html += ', delta=' + getAggregatedItemDelta(aggregatedFocus)
+      }
+    }
+    this.innerHTML = html
+  }
+
+  function markNodes (roots, predicate) {
     let nodes, i, node, children, ancestor
     const queue = [roots]
     const marked = []
@@ -149,7 +204,7 @@ export default function () {
       for (i = nodes.length; i--;) {
         node = nodes[i]
         ancestor = node.parent
-        if (term && term(node)) {
+        if (predicate && predicate(node)) {
           marked.push(node)
           node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0101 : 0b0001
           for (; ancestor && !(ancestor.mark & 0b0010); ancestor = ancestor.parent) {
@@ -161,6 +216,25 @@ export default function () {
         children = node.children
         if (children && children.length) {
           queue.push(children)
+        }
+      }
+    }
+    return marked
+  }
+
+  function markedNodes (roots) {
+    const marked = []
+    let nodes, i, node, mark
+    const queue = [roots]
+    while ((nodes = queue.pop())) {
+      for (i = nodes.length; i--;) {
+        node = nodes[i]
+        mark = node.mark
+        if (mark & 0b0001) {
+          marked.push(node)
+        }
+        if (mark & 0b0010) {
+          queue.push(node.children)
         }
       }
     }
@@ -552,7 +626,7 @@ export default function () {
         element.style.backgroundColor = nodeColor(node, context)
         element.title = nodeTitle ? nodeTitle(node, context) : ''
         nodeContent.call(element, node, context)
-        element.style.display = 'unset'
+        element.style.display = 'block'
       }
       this.nodes = nodes
     }
@@ -593,7 +667,7 @@ export default function () {
       this.nodeTip.call(this.element, node, context)
       // Need to reset `display` here, so `getBoundingClientRect()` will actually layout the tip element.
       this.element.visibility = 'hidden'
-      this.element.style.display = 'unset'
+      this.element.style.display = 'block'
       const tipRect = this.element.getBoundingClientRect()
       const clientWidth = document.documentElement.clientWidth
       const clientHeight = document.documentElement.clientHeight
@@ -636,16 +710,49 @@ export default function () {
     }
   }
 
+  class SearchController {
+    constructor (element) {
+      this.element = element
+      this.searchContent = setSearchContent
+      this.predicate = null
+      this.marked = null
+    }
+    search (term) {
+      this.predicate = markingPredicate(term)
+    }
+    updateSearch (rootNode) {
+      if (this.predicate || this.marked) {
+        const marked = markNodes([rootNode], this.predicate)
+        this.marked = this.predicate ? marked : null
+      }
+    }
+    updateView (focusNode) {
+      if (this.marked) {
+        const aggregated = markedAggregate(this.marked)
+        const markedFocus = markedNodes([focusNode])
+        const aggregatedFocus = markedAggregate(markedFocus)
+        this.searchContent.call(this.element, this.marked, aggregated, markedFocus, aggregatedFocus)
+        this.element.style.display = 'block'
+      } else {
+        this.element.style.display = 'none'
+      }
+    }
+  }
+
   const containerElement = document.createElement('div')
+  const searchElement = document.createElement('div')
   const nodesSpaceElement = document.createElement('div')
   const nodesElement = document.createElement('div')
   containerElement.className = 'd3-flame-graph'
+  searchElement.className = 'search'
   nodesSpaceElement.className = 'nodes-space'
   nodesElement.className = 'nodes'
   nodesSpaceElement.appendChild(nodesElement)
+  containerElement.appendChild(searchElement)
   containerElement.appendChild(nodesSpaceElement)
 
   const hierarchyLayout = new HierarchyLayout()
+  const searchController = new SearchController(searchElement)
   const hierarchyView = new HierarchyView(nodesElement)
   const tooltipView = new TooltipView(nodesSpaceElement)
 
@@ -664,6 +771,7 @@ export default function () {
     const layout = hierarchyLayout.layout(rootNode, focusNode, !hierarchyView.reference)
     nodesElement.style.height = layout.height + 'px'
     hierarchyView.render(layout)
+    searchController.updateView(focusNode)
   }
 
   const externalState = {
@@ -690,6 +798,7 @@ export default function () {
     focusNode = node
     if (expandNode) {
       expandNode(node)
+      searchController.updateSearch(rootNode)
     }
     updateView()
   }
@@ -820,6 +929,12 @@ export default function () {
     return chart
   }
 
+  chart.setSearchContent = function (_) {
+    if (!arguments.length) { return searchController.searchContent }
+    searchController.searchContent = optionalGetter(_, setSearchContent, null)
+    return chart
+  }
+
   chart.cellHeight = function (_) {
     if (!arguments.length) { return hierarchyLayout.rowHeight }
     hierarchyLayout.rowHeight = _
@@ -863,6 +978,7 @@ export default function () {
     focusNode = rootNode = createItemViewNode(datum)
     updateNodeValues = updateItemViewNodeValues
     expandNode = null
+    searchController.updateSearch(rootNode)
     updateView()
     return chart
   }
@@ -874,6 +990,7 @@ export default function () {
     focusNode = rootNode = createFlattenViewNode(datum)
     updateNodeValues = updateFlattenViewNodeValues
     expandNode = expandFlattenViewNode
+    searchController.updateSearch(rootNode)
     updateView()
     return chart
   }
@@ -885,25 +1002,14 @@ export default function () {
   }
 
   chart.search = function (term) {
-    if (typeof term !== 'function') {
-      term = String(term)
-      if (term.startsWith('#')) {
-        const str = term.slice(1)
-        term = function (node) { return node.name === str }
-      } else if (1 < term.length && ('"' === term[0] || '\'' === term[0]) && term[0] === term[term.length - 1]) {
-        const str = term.slice(1, -1)
-        term = function (node) { return node.name.includes(str) }
-      } else {
-        const re = new RegExp(term)
-        term = function (node) { return re.test(node.name) }
-      }
-    }
-    markNodes([rootNode], term)
+    searchController.search(term)
+    searchController.updateSearch(rootNode)
     updateView()
   }
 
   chart.clear = function () {
-    markNodes([rootNode], null)
+    searchController.search(null)
+    searchController.updateSearch(rootNode)
     updateView()
   }
 
