@@ -623,8 +623,8 @@ export default function () {
           if (!(element = unusedElements.pop())) {
             element = document.createElement('div')
             element.addEventListener('click', nodeClick)
-            element.addEventListener('mouseover', nodeMouseOver)
-            element.addEventListener('mouseout', nodeMouseOut)
+            element.addEventListener('mouseenter', nodeMouseEnter)
+            element.addEventListener('mouseleave', nodeMouseLeave)
             element.addEventListener('mousemove', nodeMouseMove)
             container.appendChild(element)
           }
@@ -825,7 +825,7 @@ export default function () {
     }
   }
 
-  function nodeMouseOver (event) {
+  function nodeMouseEnter (event) {
     if (tooltipView.nodeTip) {
       if (!(externalState.shiftKey && tooltipView.shown)) {
         tooltipView.show(event, this, this.__node__, hierarchyView.context)
@@ -833,7 +833,7 @@ export default function () {
     }
   }
 
-  function nodeMouseOut (event) {
+  function nodeMouseLeave (event) {
     if (!externalState.shiftKey) {
       tooltipView.hide()
     }
