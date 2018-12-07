@@ -84,16 +84,27 @@ export default function () {
     return function (node) { return re.test(node.name) }
   }
 
-  function markedAggregate (marked) {
+  function markedAggregate (roots) {
+    let nodes, i, node, mark
     let aggregated = null
-    let node
-    for (let i = marked.length; i--;) {
-      node = marked[i]
-      if (itemSelfValue || !(node.mark & 0b0100)) {
-        if (aggregated) {
-          addAggregatedItem(aggregated, node.item)
-        } else {
-          aggregated = createAggregatedItem(node.item)
+    const queue = [roots]
+    const aggregateRecursive = itemSelfValue
+    while ((nodes = queue.pop())) {
+      for (i = nodes.length; i--;) {
+        node = nodes[i]
+        mark = node.mark
+        if (mark & 0b0001) {
+          if (aggregated) {
+            addAggregatedItem(aggregated, node.item)
+          } else {
+            aggregated = createAggregatedItem(node.item)
+          }
+          if (!aggregateRecursive) {
+            continue
+          }
+        }
+        if (mark & 0b0010) {
+          queue.push(node.children)
         }
       }
     }
@@ -728,9 +739,9 @@ export default function () {
     }
     updateView (focusNode) {
       if (this.marked) {
-        const aggregated = markedAggregate(this.marked)
         const markedFocus = markedNodes([focusNode])
-        const aggregatedFocus = markedAggregate(markedFocus)
+        const aggregated = markedAggregate([rootNode])
+        const aggregatedFocus = markedAggregate([focusNode])
         this.searchContent.call(this.element, this.marked, aggregated, markedFocus, aggregatedFocus)
         this.element.style.display = 'block'
       } else {
