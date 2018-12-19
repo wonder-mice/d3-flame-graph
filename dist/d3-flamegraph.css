@@ -38,8 +38,18 @@
     cursor: pointer;
 }
 
-.d3-flame-graph .stem {
-  opacity: 0.6;
+/* Node is on path from focused node to the root. */
+.d3-flame-graph .focus-2 {
+  opacity: 0.5;
+}
+
+/* Node is focused. */
+.d3-flame-graph .focus-3 {
+  opacity: 0.8;
+  z-index: 1;
+  box-shadow: 0 0 0 1px black;
+}
+
 /* Node is marked. */
 .d3-flame-graph .mark-1 {
   border: 1px solid #0751B9;
@@ -67,8 +77,13 @@
   top: 0;
   font-family: Verdana;
   font-size: 12px;
-  padding: 12px;
+  padding: 8px;
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   border-radius: 2px;
+}
+
+.d3-flame-graph .search {
+  display: none;
+  margin-bottom: 8px;
 }
