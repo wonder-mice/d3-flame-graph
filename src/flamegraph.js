@@ -1012,6 +1012,20 @@ export default function () {
     return chart
   }
 
+  chart.rootNode = function () {
+    return rootNode
+  }
+
+  chart.focusNode = function () {
+    return focusNode
+  }
+
+  chart.expandNode = function (node) {
+    if (expandNode) {
+      expandNode(node)
+    }
+  }
+
   chart.search = function (term) {
     searchController.search(term)
     searchController.updateSearch(rootNode)
