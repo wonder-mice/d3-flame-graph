@@ -1,1 +1,1 @@
-export {default as flamegraph} from './src/flamegraph'
+export {deltaColor, nameColor, flamegraph} from './src/flamegraph'
