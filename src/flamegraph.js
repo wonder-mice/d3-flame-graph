@@ -26,6 +26,7 @@ export function deltaColor (delta, maxDelta) {
 }
 
 export function nameColor (name) {
+  // Name based color supposed to give similar colors for similar names.
   let tone = 0
   if (name) {
     const maxLength = 6
@@ -44,6 +45,62 @@ export function nameColor (name) {
   const g = Math.round(230 * (1 - tone))
   const b = Math.round(55 * (1 - tone))
   return 'rgb(' + r + ',' + g + ',' + b + ')'
+}
+
+// Keeps track of current callstack frames and facilitates recursion detection.
+// Initial `level` is 0 (callstack is empty). Frames are usually strings that
+// contain both function and module name (e.g. "fread @ libc")
+export class Callstack {
+  constructor () {
+    this.frames = []
+    this.frameCounts = new Map()
+  }
+  push (frame) {
+    const n = this.frameCounts.get(frame)
+    this.frameCounts.set(frame, n ? n + 1 : 1)
+    this.frames.push(frame)
+  }
+  pop (level) {
+    let frame, n
+    while (level < this.frames.length) {
+      frame = this.frames.pop()
+      n = this.frameCounts.get(frame)
+      if (n > 1) {
+        this.frameCounts.set(frame, n - 1)
+      } else {
+        this.frameCounts.delete(frame)
+      }
+    }
+  }
+  recursive (frame) {
+    return 0 < this.frameCounts.get(frame)
+  }
+}
+
+export class Node {
+  constructor (parent, item, name) {
+    this.parent = parent
+    this.item = item
+    this.name = name
+    // (mark & 0b0001) - node is marked
+    // (mark & 0b0010) - node has a descendant that is marked
+    // (mark & 0b0100) - node has an ancestor that is marked
+    // (mark & 0b1000) - node has marked descendants that are not visible (e.g. too small)
+    this.mark = 0
+    // (bits & 0b10) - node is on the path from focused node to the root
+    // (bits & 0b11) - node is fucesed
+    this.bits = 0
+    // Optional fields:
+    // .roots - array of items used to generate this node
+    // .dir - boolean, true if item is a directory
+  }
+}
+
+export class NodeContext {
+  constructor () {
+    this.hasDelta = false
+    this.maxDelta = 0
+  }
 }
 
 export function flamegraph () {
@@ -90,25 +147,6 @@ export function flamegraph () {
     const items = aggregatedItem.items
     for (let i = items.length; i--;) { delta += getItemDelta(items[i]) }
     return delta
-  }
-
-  function Node (parent, item, name) {
-    this.parent = parent
-    this.item = item
-    this.name = name
-    // (mark & 0b0001) - node is marked
-    // (mark & 0b0010) - node has a descendant that is marked
-    // (mark & 0b0100) - node has an ancestor that is marked
-    // (mark & 0b1000) - node has marked descendants that are not visible (e.g. too small)
-    this.mark = 0
-    // (bits & 0b10) - node is on the path from focused node to the root
-    // (bits & 0b11) - node is fucesed
-    this.bits = 0
-  }
-
-  function NodeContext () {
-    this.hasDelta = false
-    this.maxDelta = 0
   }
 
   function markingPredicate (term) {
@@ -253,36 +291,6 @@ export function flamegraph () {
       }
     }
     return marked
-  }
-
-  // Keeps track of current callstack frames and facilitates recursion detection.
-  // Initial `level` is 0 (callstack is empty). Frames are expected to be strings
-  // that contain function and module name.
-  class Callstack {
-    constructor () {
-      this.frames = []
-      this.frameCounts = new Map()
-    }
-    push (frame) {
-      const n = this.frameCounts.get(frame)
-      this.frameCounts.set(frame, n ? n + 1 : 1)
-      this.frames.push(frame)
-    }
-    pop (level) {
-      let frame, n
-      while (level < this.frames.length) {
-        frame = this.frames.pop()
-        n = this.frameCounts.get(frame)
-        if (n > 1) {
-          this.frameCounts.set(frame, n - 1)
-        } else {
-          this.frameCounts.delete(frame)
-        }
-      }
-    }
-    recursive (frame) {
-      return 0 < this.frameCounts.get(frame)
-    }
   }
 
   // Aggregates descendants of `rootItems` (but not `rootItems` themselves) with the
@@ -861,13 +869,13 @@ export function flamegraph () {
 
   chart.selfValue = function (_) {
     if (!arguments.length) { return itemSelfValue }
-    itemSelfValue = _
+    itemSelfValue = Boolean(_)
     return chart
   }
 
   chart.hasDelta = function (_) {
     if (!arguments.length) { return itemHasDelta }
-    itemHasDelta = _
+    itemHasDelta = Boolean(_)
     return chart
   }
 
