@@ -77,6 +77,40 @@ export class Callstack {
   }
 }
 
+export class ItemTraits {
+  constructor () {
+    this.selfValue = false
+    this.hasDelta = false
+    this.getRoot = ItemTraits.defaultGetRoot
+    this.getChildren = ItemTraits.defaultGetChildren
+    this.getName = ItemTraits.defaultGetName
+    this.getValue = ItemTraits.defaultGetValue
+    this.getDelta = ItemTraits.defaultGetDelta
+    this.createAggregate = ItemTraits.defaultCreateAggregate
+    this.addAggregateItem = ItemTraits.defaultAddAggregateItem
+    this.getAggregateValue = ItemTraits.defaultGetAggregateValue
+    this.getAggregateDelta = ItemTraits.defaultGetAggregateDelta
+  }
+  static defaultGetRoot (datum) { return datum }
+  static defaultGetChildren (item) { return item.c || item.children }
+  static defaultGetName (item) { return item.n || item.name }
+  static defaultGetValue (item) { return item.v || item.value }
+  static defaultGetDelta (item) { return item.d || item.delta }
+  static defaultCreateAggregate (item) { return { items: [item] } }
+  static defaultAddAggregateItem (aggregate, item) { aggregate.items.push(item) }
+  static defaultGetAggregateValue (aggregate) { ItemTraits.defaultGetAggregateTotal(aggregate, this.getValue) }
+  static defaultGetAggregateDelta (aggregate) { ItemTraits.defaultGetAggregateTotal(aggregate, this.getDelta) }
+  static defaultGetAggregateTotal (aggregate, getter) {
+    let total = null
+    const items = aggregate.items
+    for (let i = items.length; i--;) {
+      const value = getter.call(this, items[i])
+      if (null !== value) { total += value }
+    }
+    return total
+  }
+}
+
 export class Node {
   constructor (parent, item, name) {
     this.parent = parent
