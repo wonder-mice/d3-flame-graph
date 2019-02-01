@@ -469,12 +469,11 @@ export function flamegraph () {
   }
 
   function expandFlattenViewNode (node) {
+    let expandedNodes = null
     if (undefined === node.children) {
-      const children = node.children = aggregatedNodesByFlatteningItems(node, node.roots)
-      if (children) {
-        updateFlattenViewNodeValues(children)
-      }
+      expandedNodes = node.children = aggregatedNodesByFlatteningItems(node, node.roots)
     }
+    return expandedNodes
   }
 
   function createItemViewNode (datum) {
@@ -500,7 +499,6 @@ export function flamegraph () {
         }
       }
     }
-    updateItemViewNodeValues([rootNode])
     return rootNode
   }
 
@@ -510,7 +508,6 @@ export function flamegraph () {
     rootNode.roots = [rootItem]
     rootNode.children = aggregatedNodesByFlatteningItems(rootNode, rootNode.roots)
     rootNode.dir = true
-    updateFlattenViewNodeValues([rootNode])
     return rootNode
   }
 
@@ -853,7 +850,10 @@ export function flamegraph () {
   function zoom (node) {
     focusNode = node
     if (expandNode) {
-      expandNode(node)
+      const expandedNodes = expandNode(node)
+      if (expandedNodes) {
+        updateNodeValues(expandedNodes)
+      }
       searchController.updateSearch(rootNode)
     }
     updateView()
@@ -1034,6 +1034,8 @@ export function flamegraph () {
     focusNode = rootNode = createItemViewNode(datum)
     updateNodeValues = updateItemViewNodeValues
     expandNode = null
+    // Code below is identical for all view types
+    updateNodeValues([rootNode])
     searchController.updateSearch(rootNode)
     updateView()
     return chart
@@ -1046,6 +1048,8 @@ export function flamegraph () {
     focusNode = rootNode = createFlattenViewNode(datum)
     updateNodeValues = updateFlattenViewNodeValues
     expandNode = expandFlattenViewNode
+    // Code below is identical for all view types
+    updateNodeValues([rootNode])
     searchController.updateSearch(rootNode)
     updateView()
     return chart
@@ -1067,7 +1071,10 @@ export function flamegraph () {
 
   chart.expandNode = function (node) {
     if (expandNode) {
-      expandNode(node)
+      const expandedNodes = expandNode(node)
+      if (expandedNodes) {
+        updateNodeValues(expandedNodes)
+      }
     }
   }
 
