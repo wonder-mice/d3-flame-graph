@@ -137,6 +137,41 @@ export class NodeContext {
   }
 }
 
+export function aggregateItems (roots, traits, aggregator) {
+  const traitsGetChildren = traits.getChildren
+  const traitsGetName = traits.getName
+  let children, i, item, level, name, recursive
+  const queue = []
+  for (let n = roots.length; n--;) {
+    children = traitsGetChildren.call(traits, roots[n])
+    if (children && (i = children.length)) {
+      while (i--) {
+        queue.push(children[i])
+      }
+    }
+  }
+  const aggregateRecursive = traits.selfValue
+  const levels = Array(queue.length).fill(0)
+  const callstack = new Callstack()
+  while ((item = queue.pop())) {
+    level = levels.pop()
+    name = traitsGetName.call(traits, item)
+    recursive = callstack.recursive(name)
+    if (aggregateRecursive || !recursive) {
+      aggregator(item, name, recursive)
+    }
+    children = traitsGetChildren.call(traits, item)
+    if (children && (i = children.length)) {
+      callstack.pop(level++)
+      callstack.push(name)
+      while (i--) {
+        queue.push(children[i])
+        levels.push(level)
+      }
+    }
+  }
+}
+
 export function flamegraph () {
   var itemSelfValue = false
   var itemHasDelta = false
