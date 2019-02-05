@@ -1,1 +1,7 @@
-export {deltaColor, nameColor, Callstack, ItemTraits, Node, NodeContext, aggregateItems, flamegraph} from './src/flamegraph'
+export {
+    deltaColor, nameColor,
+    Callstack, ItemTraits, Node, NodeContext,
+    aggregateItems,
+    markingPredicate, markNodes, markedNodes, markedNodesAggregate,
+    flamegraph
+} from './src/flamegraph'

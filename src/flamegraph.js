@@ -172,99 +172,103 @@ export function aggregateItems (roots, traits, aggregator) {
   }
 }
 
-export function flamegraph () {
-  var itemSelfValue = false
-  var itemHasDelta = false
-
-  var getItemRoot = function (datum) {
-    return datum
+export function markingPredicate (term) {
+  if (!term) {
+    return null
   }
-
-  var getItemChildren = function (item) {
-    return item.c || item.children
+  if (typeof term === 'function') {
+    return term
   }
-
-  var getItemName = function (item) {
-    return item.n || item.name
+  term = String(term)
+  if (!term.length) {
+    return null
+  } else if (term.startsWith('#')) {
+    const str = term.slice(1)
+    return function (node) { return node.name === str }
+  } else if (1 < term.length && ('"' === term[0] || '\'' === term[0]) && term[0] === term[term.length - 1]) {
+    const str = term.slice(1, -1)
+    return function (node) { return node.name.includes(str) }
   }
+  const re = new RegExp(term)
+  return function (node) { return re.test(node.name) }
+}
 
-  var getItemValue = function (item) {
-    return item.v || item.value
-  }
-
-  var getItemDelta = function (item) {
-    return item.d || item.delta
-  }
-
-  var createAggregatedItem = function (item) {
-    return { items: [item] }
-  }
-
-  var addAggregatedItem = function (aggregated, item) {
-    aggregated.items.push(item)
-  }
-
-  var getAggregatedItemValue = function (aggregatedItem) {
-    let value = 0
-    const items = aggregatedItem.items
-    for (let i = items.length; i--;) { value += getItemValue(items[i]) }
-    return value
-  }
-
-  var getAggregatedItemDelta = function (aggregatedItem) {
-    let delta = 0
-    const items = aggregatedItem.items
-    for (let i = items.length; i--;) { delta += getItemDelta(items[i]) }
-    return delta
-  }
-
-  function markingPredicate (term) {
-    if (!term) {
-      return null
-    }
-    if (typeof term === 'function') {
-      return term
-    }
-    term = String(term)
-    if (!term.length) {
-      return null
-    } else if (term.startsWith('#')) {
-      const str = term.slice(1)
-      return function (node) { return node.name === str }
-    } else if (1 < term.length && ('"' === term[0] || '\'' === term[0]) && term[0] === term[term.length - 1]) {
-      const str = term.slice(1, -1)
-      return function (node) { return node.name.includes(str) }
-    }
-    const re = new RegExp(term)
-    return function (node) { return re.test(node.name) }
-  }
-
-  function markedAggregate (roots) {
-    let nodes, i, node, mark
-    let aggregated = null
-    const queue = [roots]
-    const aggregateRecursive = itemSelfValue
-    while ((nodes = queue.pop())) {
-      for (i = nodes.length; i--;) {
-        node = nodes[i]
-        mark = node.mark
-        if (mark & 0b0001) {
-          if (aggregated) {
-            addAggregatedItem(aggregated, node.item)
-          } else {
-            aggregated = createAggregatedItem(node.item)
-          }
-          if (!aggregateRecursive) {
-            continue
-          }
+export function markNodes (rootNodes, predicate) {
+  let nodes, i, node, children, ancestor
+  const queue = [rootNodes]
+  const marked = []
+  while ((nodes = queue.pop())) {
+    for (i = nodes.length; i--;) {
+      node = nodes[i]
+      ancestor = node.parent
+      if (predicate && predicate(node)) {
+        marked.push(node)
+        node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0101 : 0b0001
+        for (; ancestor && !(ancestor.mark & 0b0010); ancestor = ancestor.parent) {
+          ancestor.mark |= 0b0010
         }
-        if (mark & 0b0010) {
-          queue.push(node.children)
-        }
+      } else {
+        node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0100 : 0b0000
+      }
+      children = node.children
+      if (children && children.length) {
+        queue.push(children)
       }
     }
-    return aggregated
   }
+  return marked
+}
+
+export function markedNodes (rootNodes) {
+  const marked = []
+  let nodes, i, node, mark
+  const queue = [rootNodes]
+  while ((nodes = queue.pop())) {
+    for (i = nodes.length; i--;) {
+      node = nodes[i]
+      mark = node.mark
+      if (mark & 0b0001) {
+        marked.push(node)
+      }
+      if (mark & 0b0010) {
+        queue.push(node.children)
+      }
+    }
+  }
+  return marked
+}
+
+export function markedNodesAggregate (rootNodes, traits) {
+  let nodes, i, node, mark
+  let aggregate = null
+  const queue = [rootNodes]
+  const aggregateRecursive = traits.selfValue
+  const traitsCreateAggregate = traits.createAggregate
+  const traitsAddAggregateItem = traits.addAggregateItem
+  while ((nodes = queue.pop())) {
+    for (i = nodes.length; i--;) {
+      node = nodes[i]
+      mark = node.mark
+      if (mark & 0b0001) {
+        if (aggregate) {
+          traitsAddAggregateItem.call(traits, aggregate, node.item)
+        } else {
+          aggregate = traitsCreateAggregate.call(traits, node.item)
+        }
+        if (!aggregateRecursive) {
+          continue
+        }
+      }
+      if (mark & 0b0010) {
+        queue.push(node.children)
+      }
+    }
+  }
+  return aggregate
+}
+
+export function flamegraph () {
+  var itemTraits = new ItemTraits()
 
   var nodeWidthSmall = 35
   var nodeClassBase = 'node'
@@ -300,124 +304,55 @@ export function flamegraph () {
   }
 
   function setSearchContent (marked, aggregated, markedFocus, aggregatedFocus) {
+    const traits = itemTraits
     let html = 'Total: ' + marked.length + ' items'
     if (aggregated) {
-      html += ', value=' + getAggregatedItemValue(aggregated)
-      if (itemHasDelta) {
-        html += ', delta=' + getAggregatedItemDelta(aggregated)
+      html += ', value=' + traits.getAggregateValue(aggregated)
+      if (traits.hasDelta) {
+        html += ', delta=' + traits.getAggregateDelta(aggregated)
       }
     }
     html += '; Focus: ' + markedFocus.length + ' items'
     if (aggregatedFocus) {
-      html += ', value=' + getAggregatedItemValue(aggregatedFocus)
-      if (itemHasDelta) {
-        html += ', delta=' + getAggregatedItemDelta(aggregatedFocus)
+      html += ', value=' + traits.getAggregateValue(aggregatedFocus)
+      if (traits.hasDelta) {
+        html += ', delta=' + traits.getAggregateDelta(aggregatedFocus)
       }
     }
     this.innerHTML = html
   }
 
-  function markNodes (roots, predicate) {
-    let nodes, i, node, children, ancestor
-    const queue = [roots]
-    const marked = []
-    while ((nodes = queue.pop())) {
-      for (i = nodes.length; i--;) {
-        node = nodes[i]
-        ancestor = node.parent
-        if (predicate && predicate(node)) {
-          marked.push(node)
-          node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0101 : 0b0001
-          for (; ancestor && !(ancestor.mark & 0b0010); ancestor = ancestor.parent) {
-            ancestor.mark |= 0b0010
-          }
-        } else {
-          node.mark = ancestor && (ancestor.mark & 0b0101) ? 0b0100 : 0b0000
-        }
-        children = node.children
-        if (children && children.length) {
-          queue.push(children)
-        }
-      }
-    }
-    return marked
-  }
-
-  function markedNodes (roots) {
-    const marked = []
-    let nodes, i, node, mark
-    const queue = [roots]
-    while ((nodes = queue.pop())) {
-      for (i = nodes.length; i--;) {
-        node = nodes[i]
-        mark = node.mark
-        if (mark & 0b0001) {
-          marked.push(node)
-        }
-        if (mark & 0b0010) {
-          queue.push(node.children)
-        }
-      }
-    }
-    return marked
-  }
-
   // Aggregates descendants of `rootItems` (but not `rootItems` themselves) with the
   // same name, regardless of their place in items hierarchy.
   function aggregatedNodesByFlatteningItems (parentNode, rootItems) {
-    let n, children, i, item, level, name, recursive, node
-    const queue = []
-    n = rootItems.length
-    while (n--) {
-      children = getItemChildren(rootItems[n])
-      if (children && (i = children.length)) {
-        while (i--) {
-          queue.push(children[i])
-        }
-      }
-    }
-    const aggregateRecursive = itemSelfValue
-    const levels = Array(queue.length).fill(0)
-    const callstack = new Callstack()
     const nodes = new Map()
-    while ((item = queue.pop())) {
-      level = levels.pop()
-      name = getItemName(item)
-      recursive = callstack.recursive(name)
-      if (aggregateRecursive || !recursive) {
-        node = nodes.get(name)
-        if (!node) {
-          node = new Node(parentNode, createAggregatedItem(item), name)
-          node.roots = [item]
-          node.dir = true
-          nodes.set(name, node)
-        } else {
-          addAggregatedItem(node.item, item)
-          if (!recursive) {
-            node.roots.push(item)
-          }
+    const traits = itemTraits
+    const traitsCreateAggregate = traits.createAggregate
+    const traitsAddAggregateItem = traits.addAggregateItem
+    aggregateItems(rootItems, itemTraits, function (item, name, recursive) {
+      let node = nodes.get(name)
+      if (!node) {
+        node = new Node(parentNode, traitsCreateAggregate.call(traits, item), name)
+        node.roots = [item]
+        node.dir = true
+        nodes.set(name, node)
+      } else {
+        traitsAddAggregateItem.call(traits, node.item, item)
+        if (!recursive) {
+          node.roots.push(item)
         }
       }
-      children = getItemChildren(item)
-      if (children && (i = children.length)) {
-        callstack.pop(level++)
-        callstack.push(name)
-        while (i--) {
-          queue.push(children[i])
-          levels.push(level)
-        }
-      }
-    }
+    })
     return nodes.size ? Array.from(nodes.values()) : null
   }
 
   // Performs pre-layout stage by updating `node.total`, `node.self` and `node.delta`
-  // fields using `getItemValue()` and `getItemDelta()` functions. Updated fields don't
+  // fields using ItemTraits `getValue()` and `getDelta()` methods. Updated fields don't
   // have any intrinsic semantic meaning other than how layout interprets them. Nodes
   // will be laid out in space allowed by `parent.total - parent.self` proportionally
   // to their `total` value.
-  // Item value (returned from `getItemValue()`) can be negative (e.g. when value
-  // represents some kind of delta, though not necessary the same as `getItemDelta()`).
+  // Item value (returned from `getValue()`) can be negative (e.g. when value
+  // represents some kind of delta, though not necessary the same as `getDelta()`).
   // Keep in mind, that following is NOT neccessary true:
   //   parent.total == parent.self + sum([child.total for child in parent.children])
   //   node.total >= node.self
@@ -427,8 +362,10 @@ export function flamegraph () {
       return
     }
     let i, node, children, nodes, nodesTotal, k, parent
-    const hasDelta = itemHasDelta
-    const hasTotal = !itemSelfValue
+    const traits = itemTraits
+    const hasTotal = !traits.selfValue
+    const traitsGetValue = traits.getValue
+    const traitsGetDelta = traits.hasDelta ? traits.getDelta : null
     const queue = []
     const siblingsList = []
     // These bootstrap loop allows to use more efficient algorithm in main processing
@@ -436,9 +373,9 @@ export function flamegraph () {
     // is not a reliable indicator in case of mixed-view node hierarchies we plan for).
     for (i = rootNodes.length; i--;) {
       node = rootNodes[i]
-      node.total = node.self = getItemValue(node.item)
-      if (hasDelta) {
-        node.delta = getItemDelta(node.item)
+      node.total = node.self = traitsGetValue.call(traits, node.item)
+      if (traitsGetDelta) {
+        node.delta = traitsGetDelta.call(traits, node.item)
       }
       children = node.children
       if (children && children.length) {
@@ -453,9 +390,9 @@ export function flamegraph () {
       i = nodes.length
       while (i--) {
         node = nodes[i]
-        nodesTotal += (node.total = node.self = getItemValue(node.item))
-        if (hasDelta) {
-          node.delta = getItemDelta(node.item)
+        nodesTotal += (node.total = node.self = traitsGetValue.call(traits, node.item))
+        if (traitsGetDelta) {
+          node.delta = traitsGetDelta.call(traits, node.item)
         }
         children = node.children
         if (children && children.length) {
@@ -485,15 +422,17 @@ export function flamegraph () {
   // Same as `updateItemViewNodeValues()`, but for flatten view.
   function updateFlattenViewNodeValues (rootNodes) {
     let nodes, i, node, children
-    const hasDelta = itemHasDelta
+    const traits = itemTraits
+    const traitsGetAggregateValue = traits.getAggregateValue
+    const traitsGetAggregateDelta = traits.hasDelta ? traits.getAggregateDelta : null
     const queue = [rootNodes]
     while ((nodes = queue.pop())) {
       for (i = nodes.length; i--;) {
         node = nodes[i]
         node.self = 0
-        node.total = Math.abs(getAggregatedItemValue(node.item))
-        if (hasDelta) {
-          node.delta = getAggregatedItemDelta(node.item)
+        node.total = Math.abs(traitsGetAggregateValue.call(traits, node.item))
+        if (traitsGetAggregateDelta) {
+          node.delta = traitsGetAggregateDelta.call(traits, node.item)
         }
         children = node.children
         if (children && children.length) {
@@ -513,19 +452,22 @@ export function flamegraph () {
 
   function createItemViewNode (datum) {
     let nodes, i, node, itemChildren, k, nodeChildren, childItem, childNode
-    const rootItem = getItemRoot(datum)
-    const rootNode = new Node(null, rootItem, getItemName(rootItem))
+    const traits = itemTraits
+    const traitsGetName = traits.getName
+    const traitsGetChildren = traits.getChildren
+    const rootItem = traits.getRoot(datum)
+    const rootNode = new Node(null, rootItem, traitsGetName.call(traits, rootItem))
     const queue = [[rootNode]]
     const siblingsList = []
     while ((nodes = queue.pop())) {
       for (i = nodes.length; i--;) {
         node = nodes[i]
-        itemChildren = getItemChildren(node.item)
+        itemChildren = traitsGetChildren.call(traits, node.item)
         if (itemChildren && (k = itemChildren.length)) {
           nodeChildren = []
           while (k--) {
             childItem = itemChildren[k]
-            childNode = new Node(node, childItem, getItemName(childItem))
+            childNode = new Node(node, childItem, traitsGetName.call(traits, childItem))
             nodeChildren.push(childNode)
           }
           node.children = nodeChildren
@@ -538,8 +480,9 @@ export function flamegraph () {
   }
 
   function createFlattenViewNode (datum) {
-    const rootItem = getItemRoot(datum)
-    const rootNode = new Node(null, createAggregatedItem(rootItem), getItemName(rootItem))
+    const traits = itemTraits
+    const rootItem = traits.getRoot(datum)
+    const rootNode = new Node(null, traits.createAggregate(rootItem), traits.getName(rootItem))
     rootNode.roots = [rootItem]
     rootNode.children = aggregatedNodesByFlatteningItems(rootNode, rootNode.roots)
     rootNode.dir = true
@@ -817,8 +760,8 @@ export function flamegraph () {
     updateView (focusNode) {
       if (this.marked) {
         const markedFocus = markedNodes([focusNode])
-        const aggregated = markedAggregate([rootNode])
-        const aggregatedFocus = markedAggregate([focusNode])
+        const aggregated = markedNodesAggregate([rootNode], itemTraits)
+        const aggregatedFocus = markedNodesAggregate([focusNode], itemTraits)
         this.searchContent.call(this.element, this.marked, aggregated, markedFocus, aggregatedFocus)
         this.element.style.display = 'block'
       } else {
@@ -855,7 +798,7 @@ export function flamegraph () {
   function updateView () {
     const nodesRect = nodesElement.getBoundingClientRect()
     hierarchyLayout.totalWidth = nodesRect.width
-    hierarchyLayout.hasDelta = itemHasDelta
+    hierarchyLayout.hasDelta = itemTraits.hasDelta
     const layout = hierarchyLayout.layout(rootNode, focusNode, !hierarchyView.reference)
     nodesElement.style.height = layout.height + 'px'
     hierarchyView.render(layout)
@@ -936,63 +879,9 @@ export function flamegraph () {
     return chart
   }
 
-  chart.selfValue = function (_) {
-    if (!arguments.length) { return itemSelfValue }
-    itemSelfValue = Boolean(_)
-    return chart
-  }
-
-  chart.hasDelta = function (_) {
-    if (!arguments.length) { return itemHasDelta }
-    itemHasDelta = Boolean(_)
-    return chart
-  }
-
-  chart.getItemName = function (_) {
-    if (!arguments.length) { return getItemName }
-    getItemName = _
-    return chart
-  }
-
-  chart.getItemValue = function (_) {
-    if (!arguments.length) { return getItemValue }
-    getItemValue = _
-    return chart
-  }
-
-  chart.getItemDelta = function (_) {
-    if (!arguments.length) { return getItemDelta }
-    getItemDelta = _
-    return chart
-  }
-
-  chart.getItemChildren = function (_) {
-    if (!arguments.length) { return getItemChildren }
-    getItemChildren = _
-    return chart
-  }
-
-  chart.createAggregatedItem = function (_) {
-    if (!arguments.length) { return createAggregatedItem }
-    createAggregatedItem = _
-    return chart
-  }
-
-  chart.addAggregatedItem = function (_) {
-    if (!arguments.length) { return addAggregatedItem }
-    addAggregatedItem = _
-    return chart
-  }
-
-  chart.getAggregatedItemValue = function (_) {
-    if (!arguments.length) { return getAggregatedItemValue }
-    getAggregatedItemValue = _
-    return chart
-  }
-
-  chart.getAggregatedItemDelta = function (_) {
-    if (!arguments.length) { return getAggregatedItemDelta }
-    getAggregatedItemDelta = _
+  chart.itemTraits = function (_) {
+    if (!arguments.length) { return itemTraits }
+    itemTraits = _
     return chart
   }
 
