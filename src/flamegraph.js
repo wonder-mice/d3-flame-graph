@@ -111,22 +111,27 @@ export class ItemTraits {
   }
 }
 
+// `Node.mark` flags:
+export const nodeMarked = 0b0001 // node is marked
+export const nodeDescendantMarked = 0b0010 // node has a descendant that is marked
+export const nodeAncestorMarked = 0b0100 // node has an ancestor that is marked
+export const nodeHiddenDescendantMarked = 0b1000 // node has marked descendants that are not visible (e.g. too small)
+
+// `Node.bits` flags:
+export const nodeFocused = 0b11 // node is focused
+export const nodeDescendantFocused = 0b10 // node is on the path from focused node to the root
+
 export class Node {
   constructor (parent, item, name) {
     this.parent = parent
     this.item = item
     this.name = name
-    // (mark & 0b0001) - node is marked
-    // (mark & 0b0010) - node has a descendant that is marked
-    // (mark & 0b0100) - node has an ancestor that is marked
-    // (mark & 0b1000) - node has marked descendants that are not visible (e.g. too small)
     this.mark = 0
-    // (bits & 0b10) - node is on the path from focused node to the root
-    // (bits & 0b11) - node is fucesed
     this.bits = 0
     // Optional fields:
     // .roots - array of items used to generate this node
     // .dir - boolean, true if item is a directory
+    // .ref - value stored in this field is the same for all visible nodes, while not visible nodes have different values
   }
 }
 
@@ -134,6 +139,75 @@ export class NodeContext {
   constructor () {
     this.hasDelta = false
     this.maxDelta = 0
+  }
+}
+
+export class NodeHighlightClass {
+  constructor (name, prefix) {
+    this.name = name || null
+    this.prefix = prefix || null
+    this._cluster = null
+  }
+  setName (name) {
+    this.name = name
+    this._cluster = null
+  }
+  getClass (index) {
+    return (this._cluster || this.generateCluster())[index]
+  }
+  getCluster () {
+    return this._cluster || this.generateCluster()
+  }
+  generateCluster () {
+    const name = this.prefix ? this.prefix + this.name : this.name
+    return (this._cluster = Array.from({length: 16}, (v, k) => name + k))
+  }
+}
+
+export class NodeHighlighter {
+  constructor () {
+    this.mapping = new Map()
+  }
+  addNode (key, node) {
+    const mapping = this.mapping
+    let nodes = mapping.get(key)
+    if (nodes) {
+      nodes.push(node)
+    } else {
+      mapping.set(key, [node])
+    }
+  }
+  getHighlight (key, ref, highlightClass) {
+    const nodes = this.mapping.get(key)
+    if (!nodes) {
+      return null
+    }
+    const marks = new Map()
+    for (let i = nodes.length; 0 < i--;) {
+      let node = nodes[i]
+      if (node.ref === ref) {
+        marks.set(node, marks.get(node) | nodeMarked)
+      } else {
+        while ((node = node.parent)) {
+          if (node.ref === ref) {
+            const value = marks.get(node)
+            if (!(value & nodeHiddenDescendantMarked)) {
+              marks.set(node, value | nodeHiddenDescendantMarked)
+            }
+            break
+          }
+        }
+      }
+    }
+    return { ref: ref, cluster: highlightClass.getCluster(), marks: marks }
+  }
+  static applyHighlight (highlight, ref, enable) {
+    if (highlight && highlight.ref === ref) {
+      const cluster = highlight.cluster
+      highlight.marks.forEach(function (mark, node, map) {
+        node.element.classList.toggle(cluster[mark], enable)
+      })
+    }
   }
 }
 
@@ -268,13 +342,16 @@ export function markedNodesAggregate (rootNodes, traits) {
 }
 
 export function flamegraph () {
-  var itemTraits = new ItemTraits()
+  const nodeFocusHighlightClass = new NodeHighlightClass('fg-fc', ' ')
+  const nodeMarkHighlightClass = new NodeHighlightClass('fg-mk', ' ')
+  const nodeHoverHighlightClass = new NodeHighlightClass('fg-hv')
+  let nodeNameHighlighter = null
+  let nodeHoverHighlight = null
+  let itemTraits = new ItemTraits()
 
-  var nodeWidthSmall = 35
-  var nodeClassBase = 'node'
-  var nodeClassBaseSmall = 'node-sm'
-  var nodeClassFocus = 'focus-'
-  var nodeClassMarked = 'mark-'
+  let nodeWidthSmall = 35
+  let nodeClassBase = 'node'
+  let nodeClassBaseSmall = 'node-sm'
 
   function getNodeColor (node, context) {
     return context.hasDelta && context.maxDelta ? deltaColor(node.delta, context.maxDelta) : nameColor(node.name)
@@ -292,9 +369,9 @@ export function flamegraph () {
     const small = node.width <= nodeWidthSmall
     let classes = small ? nodeClassBaseSmall : nodeClassBase
     const focus = node.bits & 0b11
-    if (focus) { classes += ' ' + nodeClassFocus + focus }
+    if (focus) { classes += nodeFocusHighlightClass.getClass(focus) }
     const mark = node.mark & 0b1001
-    if (mark) { classes += ' ' + nodeClassMarked + mark }
+    if (mark) { classes += nodeMarkHighlightClass.getClass(mark) }
     this.className = classes
     this.textContent = small ? '' : node.name
   }
@@ -450,13 +527,23 @@ export function flamegraph () {
     return expandedNodes
   }
 
+  function resetView () {
+    nodeHoverHighlight = null
+    nodeNameHighlighter = null
+    if (rootNode) {
+      hierarchyView.recycle([rootNode])
+    }
+  }
+
   function createItemViewNode (datum) {
-    let nodes, i, node, itemChildren, k, nodeChildren, childItem, childNode
+    let name, nodes, i, node, itemChildren, k, nodeChildren, childItem, childNode
     const traits = itemTraits
     const traitsGetName = traits.getName
     const traitsGetChildren = traits.getChildren
+    nodeNameHighlighter = new NodeHighlighter()
     const rootItem = traits.getRoot(datum)
-    const rootNode = new Node(null, rootItem, traitsGetName.call(traits, rootItem))
+    const rootNode = new Node(null, rootItem, (name = traitsGetName.call(traits, rootItem)))
+    nodeNameHighlighter.addNode(name, rootNode)
     const queue = [[rootNode]]
     const siblingsList = []
     while ((nodes = queue.pop())) {
@@ -467,7 +554,8 @@ export function flamegraph () {
           nodeChildren = []
           while (k--) {
             childItem = itemChildren[k]
-            childNode = new Node(node, childItem, traitsGetName.call(traits, childItem))
+            childNode = new Node(node, childItem, (name = traitsGetName.call(traits, childItem)))
+            nodeNameHighlighter.addNode(name, childNode)
             nodeChildren.push(childNode)
           }
           node.children = nodeChildren
@@ -659,7 +747,6 @@ export function flamegraph () {
         nodeContent.call(element, node, context)
         element.style.display = 'block'
       }
-      this.nodes = nodes
     }
     recycle (roots) {
       let nodes, i, node, element, children
@@ -668,6 +755,8 @@ export function flamegraph () {
         for (i = nodes.length; i--;) {
           node = nodes[i]
           if ((element = node.element)) {
+            // No need to reset `node.element` to `null`, since one more extra reference on `element` is not an issue.
+            // That's because elements are recycled and never released anyway.
             element.__node__ = null
             this.unusedElements.push(element)
           }
@@ -774,7 +863,7 @@ export function flamegraph () {
   const searchElement = document.createElement('div')
   const nodesSpaceElement = document.createElement('div')
   const nodesElement = document.createElement('div')
-  containerElement.className = 'd3-flame-graph'
+  containerElement.className = 'flamegraph'
   searchElement.className = 'search'
   nodesSpaceElement.className = 'nodes-space'
   nodesElement.className = 'nodes'
@@ -849,14 +938,20 @@ export function flamegraph () {
   }
 
   function nodeMouseEnter (event) {
+    const node = this.__node__
+    if (nodeNameHighlighter) {
+      nodeHoverHighlight = nodeNameHighlighter.getHighlight(node.name, hierarchyView.reference, nodeHoverHighlightClass)
+      NodeHighlighter.applyHighlight(nodeHoverHighlight, hierarchyView.reference, true)
+    }
     if (tooltipView.nodeTip) {
       if (!(externalState.shiftKey && tooltipView.shown)) {
-        tooltipView.show(event, this, this.__node__, hierarchyView.context)
+        tooltipView.show(event, this, node, hierarchyView.context)
       }
     }
   }
 
   function nodeMouseLeave (event) {
+    NodeHighlighter.applyHighlight(nodeHoverHighlight, hierarchyView.reference, false)
     if (!externalState.shiftKey) {
       tooltipView.hide()
     }
@@ -952,9 +1047,7 @@ export function flamegraph () {
   }
 
   chart.createItemsView = function (datum) {
-    if (rootNode) {
-      hierarchyView.recycle([rootNode])
-    }
+    resetView()
     focusNode = rootNode = createItemViewNode(datum)
     updateNodeValues = updateItemViewNodeValues
     expandNode = null
@@ -966,9 +1059,7 @@ export function flamegraph () {
   }
 
   chart.createFlattenView = function (datum) {
-    if (rootNode) {
-      hierarchyView.recycle([rootNode])
-    }
+    resetView()
     focusNode = rootNode = createFlattenViewNode(datum)
     updateNodeValues = updateFlattenViewNodeValues
     expandNode = expandFlattenViewNode
