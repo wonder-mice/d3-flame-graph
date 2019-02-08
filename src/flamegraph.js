@@ -128,10 +128,14 @@ export class Node {
     this.name = name
     this.mark = 0
     this.bits = 0
+    // Short for `revision`. Value stored in this field is the same for all visible nodes, while not visible nodes
+    // will have values different from the value that visible nodes have. This technique saves cycles on marking
+    // nodes discarded by layout as invisible. Since usually there are more invisible nodes then visible, it gives
+    // nice time savings.
+    this.rev = 0
     // Optional fields:
     // .roots - array of items used to generate this node
     // .dir - boolean, true if item is a directory
-    // .ref - value stored in this field is the same for all visible nodes, while not visible nodes have different values
   }
 }
 
@@ -177,7 +181,7 @@ export class NodeHighlighter {
       mapping.set(key, [node])
     }
   }
-  getHighlight (key, ref, highlightClass) {
+  getHighlight (key, revision, highlightClass) {
     const nodes = this.mapping.get(key)
     if (!nodes) {
       return null
@@ -185,11 +189,11 @@ export class NodeHighlighter {
     const marks = new Map()
     for (let i = nodes.length; 0 < i--;) {
       let node = nodes[i]
-      if (node.ref === ref) {
+      if (revision === node.rev) {
         marks.set(node, marks.get(node) | nodeMarked)
       } else {
         while ((node = node.parent)) {
-          if (node.ref === ref) {
+          if (revision === node.rev) {
             const value = marks.get(node)
             if (!(value & nodeHiddenDescendantMarked)) {
               marks.set(node, value | nodeHiddenDescendantMarked)
@@ -199,10 +203,10 @@ export class NodeHighlighter {
         }
       }
     }
-    return { ref: ref, cluster: highlightClass.getCluster(), marks: marks }
+    return { revision: revision, cluster: highlightClass.getCluster(), marks: marks }
   }
-  static applyHighlight (highlight, ref, enable) {
-    if (highlight && highlight.ref === ref) {
+  static applyHighlight (highlight, revision, enable) {
+    if (highlight && revision === highlight.revision) {
       const cluster = highlight.cluster
       highlight.marks.forEach(function (mark, node, map) {
         node.element.classList.toggle(cluster[mark], enable)
@@ -588,7 +592,7 @@ export function flamegraph () {
       this.height = 0
       this.rowHeight = 0
       this.context = new NodeContext()
-      this.reference = 0
+      this.revision = 0
     }
   }
 
@@ -600,7 +604,7 @@ export function flamegraph () {
       this.hasDelta = false
       this.order = nodesTotalOrder
     }
-    layout (rootNode, focusNode, reference) {
+    layout (rootNode, focusNode, revision) {
       let node, i, children, childrenY, n, directory
       let subtotal, abstotal, ratio, child, childX, childWidth, delta
       let totalHeight = 0
@@ -621,7 +625,7 @@ export function flamegraph () {
         node.y = totalHeight
         node.mark &= 0b0111
         node.bits = (node.bits & 0b11111100) | (0 === i ? 0b11 : 0b10)
-        node.ref = reference
+        node.rev = revision
         nodes.push(node)
         totalHeight += rowHeight
       }
@@ -674,7 +678,7 @@ export function flamegraph () {
           }
           child.mark &= 0b0111
           child.bits &= 0b11111100
-          child.ref = reference
+          child.rev = revision
           nodes.push(child)
         }
         if (totalHeight < childrenY) {
@@ -687,7 +691,7 @@ export function flamegraph () {
       result.rowHeight = rowHeight
       result.context.hasDelta = hasDelta
       result.context.maxDelta = maxDelta
-      result.reference = reference
+      result.revision = revision
       return result
     }
   }
@@ -701,18 +705,18 @@ export function flamegraph () {
       this.inverted = false
       this.context = null
       this.nodes = null
-      this.reference = false // Any alternating value will work, could use incremented integer instead.
+      this.revision = null
       this.unusedElements = []
     }
     render (layout) {
       let nodes, i, node, element
+      const revision = layout.revision
       const unusedElements = this.unusedElements
-      if ((nodes = this.nodes) && this.reference !== layout.reference) {
+      if ((nodes = this.nodes) && revision !== this.revision) {
         // Hide currently visible elements that don't have their node in `layout`.
-        const reference = layout.reference
         for (i = nodes.length; i--;) {
           node = nodes[i]
-          if (node.ref !== reference) {
+          if (node.rev !== revision) {
             node.element.style.display = 'none'
           }
         }
@@ -724,7 +728,7 @@ export function flamegraph () {
       const fixY = this.inverted ? layout.height - layout.rowHeight : 0
       const context = this.context = layout.context
       this.nodes = nodes = layout.nodes
-      this.reference = layout.reference
+      this.revision = revision
       for (i = nodes.length; i--;) {
         element = (node = nodes[i]).element
         if (!element) {
@@ -756,7 +760,8 @@ export function flamegraph () {
           node = nodes[i]
           if ((element = node.element)) {
             // No need to reset `node.element` to `null`, since one more extra reference on `element` is not an issue.
-            // That's because elements are recycled and never released anyway.
+            // That's because elements are recycled and never released anyway. However we don't want references on nodes,
+            // since node structures can be pretty big.
             element.__node__ = null
             this.unusedElements.push(element)
           }
@@ -876,19 +881,20 @@ export function flamegraph () {
   const hierarchyView = new HierarchyView(nodesElement)
   const tooltipView = new TooltipView(nodesSpaceElement)
 
-  var rootNode = null
-  var focusNode = null
-  var updateNodeValues = null
-  var expandNode = null
-  var chartWidth = null
-  var chartHeight = null
-  var clickHandler = null
+  let rootNode = null
+  let focusNode = null
+  let updateNodeValues = null
+  let expandNode = null
+  let chartWidth = null
+  let chartHeight = null
+  let clickHandler = null
+  let viewRevision = 0
 
   function updateView () {
     const nodesRect = nodesElement.getBoundingClientRect()
     hierarchyLayout.totalWidth = nodesRect.width
     hierarchyLayout.hasDelta = itemTraits.hasDelta
-    const layout = hierarchyLayout.layout(rootNode, focusNode, !hierarchyView.reference)
+    const layout = hierarchyLayout.layout(rootNode, focusNode, ++viewRevision)
     nodesElement.style.height = layout.height + 'px'
     hierarchyView.render(layout)
     searchController.updateView(focusNode)
@@ -940,8 +946,8 @@ export function flamegraph () {
   function nodeMouseEnter (event) {
     const node = this.__node__
     if (nodeNameHighlighter) {
-      nodeHoverHighlight = nodeNameHighlighter.getHighlight(node.name, hierarchyView.reference, nodeHoverHighlightClass)
-      NodeHighlighter.applyHighlight(nodeHoverHighlight, hierarchyView.reference, true)
+      nodeHoverHighlight = nodeNameHighlighter.getHighlight(node.name, viewRevision, nodeHoverHighlightClass)
+      NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, true)
     }
     if (tooltipView.nodeTip) {
       if (!(externalState.shiftKey && tooltipView.shown)) {
@@ -951,7 +957,7 @@ export function flamegraph () {
   }
 
   function nodeMouseLeave (event) {
-    NodeHighlighter.applyHighlight(nodeHoverHighlight, hierarchyView.reference, false)
+    NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, false)
     if (!externalState.shiftKey) {
       tooltipView.hide()
     }
