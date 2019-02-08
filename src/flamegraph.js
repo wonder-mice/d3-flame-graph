@@ -203,7 +203,20 @@ export class NodeHighlighter {
         }
       }
     }
-    return { revision: revision, cluster: highlightClass.getCluster(), marks: marks }
+    return { key: key, revision: revision, cluster: highlightClass.getCluster(), marks: marks }
+  }
+  highlightKey (key, revision, highlightClass) {
+    const highlight = this.getHighlight(key, revision, highlightClass)
+    NodeHighlighter.applyHighlight(highlight, revision, true)
+    return highlight
+  }
+
+  highlightUpdate (highlight, revision, highlightClass) {
+    if (highlight) {
+      highlight = this.getHighlight(highlight.key, revision, highlightClass)
+      NodeHighlighter.applyHighlight(highlight, revision, true)
+    }
+    return highlight
   }
   static applyHighlight (highlight, revision, enable) {
     if (highlight && revision === highlight.revision) {
@@ -898,6 +911,9 @@ export function flamegraph () {
     nodesElement.style.height = layout.height + 'px'
     hierarchyView.render(layout)
     searchController.updateView(focusNode)
+    if (nodeNameHighlighter) {
+      nodeHoverHighlight = nodeNameHighlighter.highlightUpdate(nodeHoverHighlight, viewRevision, nodeHoverHighlightClass)
+    }
   }
 
   const externalState = {
@@ -945,9 +961,9 @@ export function flamegraph () {
 
   function nodeMouseEnter (event) {
     const node = this.__node__
+    NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, false)
     if (nodeNameHighlighter) {
-      nodeHoverHighlight = nodeNameHighlighter.getHighlight(node.name, viewRevision, nodeHoverHighlightClass)
-      NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, true)
+      nodeHoverHighlight = nodeNameHighlighter.highlightKey(node.name, viewRevision, nodeHoverHighlightClass)
     }
     if (tooltipView.nodeTip) {
       if (!(externalState.shiftKey && tooltipView.shown)) {
@@ -958,6 +974,7 @@ export function flamegraph () {
 
   function nodeMouseLeave (event) {
     NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, false)
+    nodeHoverHighlight = null
     if (!externalState.shiftKey) {
       tooltipView.hide()
     }
