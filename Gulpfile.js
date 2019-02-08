@@ -20,12 +20,12 @@ gulp.task('lint', function () {
 
 gulp.task('rollup', function () {
   return rollup('rollup.config.js')
-    .pipe(source('d3-flamegraph.js'))
+    .pipe(source('flamegraph.js'))
     .pipe(gulp.dest('./dist'))
 })
 
 gulp.task('uglify', function () {
-  return gulp.src('./dist/d3-flamegraph.js')
+  return gulp.src('./dist/flamegraph.js')
     .pipe(gulp.dest('./dist'))
     .pipe(rename({suffix: '.min'}))
     .pipe(uglify())
@@ -34,7 +34,7 @@ gulp.task('uglify', function () {
 
 gulp.task('style', function () {
   return gulp.src('./src/flamegraph.css')
-    .pipe(rename('d3-flamegraph.css'))
+    .pipe(rename('flamegraph.css'))
     .pipe(gulp.dest('./dist'))
 })
 

@@ -1,8 +1,8 @@
 {
-  "name": "d3-flame-graph",
-  "version": "2.0.4",
-  "description": "A d3.js library to produce flame graphs.",
-  "main": "dist/d3-flamegraph.js",
+  "name": "flamegraph",
+  "version": "1.0.0",
+  "description": "Customizable interactive flame graphs JavaScript framework",
+  "main": "dist/flamegraph.js",
   "directories": {
     "example": "example"
   },
@@ -10,26 +10,24 @@
     "pretest": "gulp build",
     "test": "tape 'test/**/*-test.js'",
     "prepare": "npm run test",
-    "postpublish": "zip -j dist/d3-flamegraph.zip -- LICENSE README.md dist/d3-flamegraph.js dist/d3-flamegraph.min.js dist/d3-flamegraph.css"
+    "postpublish": "zip -j dist/flamegraph.zip -- LICENSE README.md dist/flamegraph.js dist/flamegraph.min.js dist/flamegraph.css"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/spiermar/d3-flame-graph.git"
+	"url": "git+https://github.com/wonder-mice/flamegraph.js.git"
   },
   "keywords": [
-    "d3",
-    "d3-module",
     "flame",
     "graph",
     "flamegraph",
     "performance"
   ],
-  "author": "Martin Spier <spiermar@gmail.com>",
+  "author": "Wonder Mice <wonder.mice@gmail.com>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/spiermar/d3-flame-graph/issues"
+    "url": "https://github.com/wonder-mice/flamegraph.js/issues"
   },
-  "homepage": "https://github.com/spiermar/d3-flame-graph#readme",
+  "homepage": "https://github.com/wonder-mice/flamegraph.js",
   "devDependencies": {
     "browser-sync": "^2.24.7",
     "del": "^3.0.0",
@@ -50,13 +48,5 @@
     "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
-    "d3-array": "^1.2.4",
-    "d3-ease": "^1.0.5",
-    "d3-format": "^1.3.2",
-    "d3-hierarchy": "^1.1.8",
-    "d3-scale": "^2.1.2",
-    "d3-selection": "^1.3.2",
-    "d3-tip": "0.9.1",
-    "d3-transition": "^1.1.3"
   }
 }
