@@ -1,5 +1,7 @@
-node_modules/
 .DS_Store
-npm-debug.log
-package-lock.json
-dist/d3-flamegraph.zip
+/.vscode
+/dist
+/npm-debug.log
+/package-lock.json
+/flamegraph-*.tgz
+/node_modules/
