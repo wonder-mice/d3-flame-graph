@@ -192,6 +192,8 @@ export class NodeHighlighter {
       if (revision === node.rev) {
         marks.set(node, marks.get(node) | nodeMarked)
       } else {
+        // This will look for a closest visible parent. It would be nice to cache result of this search,
+        // but I didn't come up with a efficient mechanism to invalidate such cache.
         while ((node = node.parent)) {
           if (revision === node.rev) {
             const value = marks.get(node)
