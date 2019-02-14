@@ -570,6 +570,7 @@ export function flamegraph () {
         node = nodes[i]
         itemChildren = traitsGetChildren.call(traits, node.item)
         if (itemChildren && (k = itemChildren.length)) {
+          // FIXME: We can preallocate size of this array, will it be better?
           nodeChildren = []
           while (k--) {
             childItem = itemChildren[k]
