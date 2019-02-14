@@ -342,7 +342,7 @@ export function markedNodesAggregate (rootNodes, traits) {
     for (i = nodes.length; i--;) {
       node = nodes[i]
       mark = node.mark
-      if (mark & 0b0001) {
+      if (mark & nodeMarked) {
         if (aggregate) {
           traitsAddAggregateItem.call(traits, aggregate, node.item)
         } else {
@@ -352,7 +352,7 @@ export function markedNodesAggregate (rootNodes, traits) {
           continue
         }
       }
-      if (mark & 0b0010) {
+      if (mark & nodeDescendantMarked) {
         queue.push(node.children)
       }
     }
