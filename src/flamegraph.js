@@ -1078,7 +1078,7 @@ export function flamegraph () {
     focusNode = rootNode = createItemViewNode(datum)
     updateNodeValues = updateItemViewNodeValues
     expandNode = null
-    // Code below is identical for all view types
+    // Code below is identical for all current view types
     updateNodeValues([rootNode])
     searchController.updateSearch(rootNode)
     updateView()
@@ -1090,7 +1090,7 @@ export function flamegraph () {
     focusNode = rootNode = createFlattenViewNode(datum)
     updateNodeValues = updateFlattenViewNodeValues
     expandNode = expandFlattenViewNode
-    // Code below is identical for all view types
+    // Code below is identical for all current view types
     updateNodeValues([rootNode])
     searchController.updateSearch(rootNode)
     updateView()
