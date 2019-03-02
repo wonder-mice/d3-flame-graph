@@ -1369,5 +1369,9 @@ export function flamegraph () {
     return chart
   }
 
+  chart.hoveredNode = function () {
+    return hoveredNode
+  }
+
   return chart
 }
