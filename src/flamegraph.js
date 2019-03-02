@@ -1,3 +1,43 @@
+/*
+
+= Flame graph update stages =
+
+General idea is that downstream stages should be cheaper / faster then previous stages, because they will be executed much more often.
+Thus earlier stages should try to preprocess data to speed up downstream stages. Any piece of work must be placed as high upstream
+as possible. Earlier stages invalidate following stages, so after each stage run, all following stages must run too.
+
+It looks interesting to have `revision` not only for rendering stage, but share it with other stages too. Each time modification is made
+that requires stage re-run, stage's revision can be incremented. Then, `update` function just needs to find lowest stage with revision
+that is greater than what is being displayed / renedered and re-run this stage and all stages above it. Some customizable changes can have
+an optional parameter that describe what stages they impact. E.g. change in delta color doesn't require layout, but change in item valuation
+does.
+
+== Node creation ==
+
+Node is a visual unit that can be rendered. Nodes can be created all at once or lazily (e.g. as parts of tree are expanded).
+If item (cost) aggregation need to happen, it should be performed on this stage.
+
+== Node value update ==
+
+Node children sorting must be done on this stage. Currently it's done during layout, which is not optimal.
+
+== Node layout ==
+
+Invalidates:
+- Highlight, because it changes node visibility.
+
+== Node rendering ==
+
+Invalidates:
+- Highlight, because elements are fully reconfigured (properties are assigned, not adjusted).
+
+== Element visual adjustments ==
+
+Things that can happen:
+- Highlight changes.
+
+*/
+
 function hsv2rbg (h, s, v) {
   const i = Math.floor(h * 6)
   const f = h * 6 - i
@@ -48,33 +88,60 @@ export function nameColor (name) {
   return 'rgb(' + r + ',' + g + ',' + b + ')'
 }
 
+export class Metrics {
+  static enable () {
+    Metrics.stack = []
+  }
+  static begin (name) {
+    const stack = Metrics.stack
+    if (stack) {
+      const p = stack.length
+      stack.push(name)
+      const alias = stack[p] = stack.join('/')
+      console.time(alias)
+      console.profile(alias)
+    }
+  }
+  static end () {
+    const stack = Metrics.stack
+    if (stack) {
+      const alias = stack.pop()
+      console.profileEnd(alias)
+      console.timeEnd(alias)
+    }
+  }
+}
+
 // Keeps track of current callstack frames and facilitates recursion detection.
 // Initial `level` is 0 (callstack is empty). Frames are usually strings that
 // contain both function and module name (e.g. "fread @ libc")
 export class Callstack {
   constructor () {
-    this.frames = []
+    this.stack = []
     this.frameCounts = new Map()
+    this.depth = 0
   }
   push (frame) {
-    const n = this.frameCounts.get(frame)
-    this.frameCounts.set(frame, n ? n + 1 : 1)
-    this.frames.push(frame)
+    const frameCounts = this.frameCounts
+    const record = frameCounts.get(frame)
+    if (record) {
+      this.stack[this.depth++] = record
+      return 0 < record.n++
+    }
+    frameCounts.set(frame, (this.stack[this.depth++] = {n: 1}))
+    return false
   }
   pop (level) {
-    let frame, n
-    while (level < this.frames.length) {
-      frame = this.frames.pop()
-      n = this.frameCounts.get(frame)
-      if (n > 1) {
-        this.frameCounts.set(frame, n - 1)
-      } else {
-        this.frameCounts.delete(frame)
-      }
+    let depth = this.depth
+    if (level < depth) {
+      const stack = this.stack
+      do { --stack[--depth].n } while (level < depth)
+      this.depth = depth
     }
   }
   recursive (frame) {
-    return 0 < this.frameCounts.get(frame)
+    const record = this.frameCounts.get(frame)
+    return record && 0 < record.n
   }
 }
 
@@ -91,6 +158,8 @@ export class ItemTraits {
     this.addAggregateItem = ItemTraits.defaultAddAggregateItem
     this.getAggregateValue = ItemTraits.defaultGetAggregateValue
     this.getAggregateDelta = ItemTraits.defaultGetAggregateDelta
+    this.collectSiblings = ItemTraits.defaultCollectSiblings
+    this.preorderDFS = ItemTraits.defaultPreorderDFS
   }
   static defaultGetRoot (datum) { return datum }
   static defaultGetChildren (item) { return item.c || item.children }
@@ -109,6 +178,38 @@ export class ItemTraits {
       if (null !== value) { total += value }
     }
     return total
+  }
+  static defaultCollectSiblings (parents) {
+    const result = []
+    for (let n = parents.length; n--;) {
+      const children = this.getChildren(parents[n])
+      if (children) {
+        for (let i = children.length; i--;) {
+          result.push(children[i])
+        }
+      }
+    }
+    return result
+  }
+  static defaultPreorderDFS (queue, callback) {
+    let k = queue.length
+    const levels = Array(k).fill(0)
+    while (k--) {
+      const item = queue[k]
+      const level = levels[k]
+      const children = this.getChildren(item)
+      const childrenCount = children ? children.length : 0
+      callback(item, level, childrenCount)
+      if (childrenCount) {
+        const childrenLevel = level + 1
+        let i = childrenCount - 1
+        do {
+          queue[k] = children[i]
+          levels[k] = childrenLevel
+          ++k
+        } while (i--)
+      }
+    }
   }
 }
 
@@ -137,6 +238,10 @@ export class Node {
     // Optional fields:
     // .roots - array of items used to generate this node
     // .dir - boolean, true if item is a directory
+    // Value fields:
+    // .total - signed scalar, total cost of the node and it's descendants (can be negative!)
+    // .self - signed scalar, intrinsic cost of the node itself (can be negative!)
+    // .delta - signed scalar, used for node coloring
   }
 }
 
@@ -147,46 +252,151 @@ export class NodeContext {
   }
 }
 
+export class NodeIndexEntry {
+  constructor (nodes, aggregate) {
+    this.nodes = nodes
+    this.aggregate = aggregate
+  }
+}
+
+function nodeIndexAggregate (index, key) {
+  let entry
+  return index && (entry = index.get(key)) && entry.aggregate
+}
+
+function createNodeNameIndex (rootNodes, traits) {
+  const aggregateRecursive = traits.selfValue
+  const callstack = aggregateRecursive ? null : new Callstack()
+  const queue = rootNodes.slice()
+  const levels = Array(queue.length).fill(0)
+  const index = new Map()
+  for (let k = queue.length; k--;) {
+    const node = queue[k]
+    const level = levels[k]
+    const name = node.name
+    const children = node.children
+    const childrenCount = children && children.length
+    if (childrenCount) {
+      const childrenLevel = level + 1
+      for (let i = childrenCount; i--; k++) {
+        queue[k] = children[i]
+        levels[k] = childrenLevel
+      }
+    }
+    const aggregate = callstack ? !(callstack.pop(level), childrenCount ? callstack.push(name) : callstack.recursive(name)) : true
+    let entry = index.get(name)
+    if (entry) {
+      entry.nodes.push(node)
+      if (aggregate) {
+        traits.addAggregateItem(entry.aggregate, node.item)
+      }
+    } else {
+      entry = new NodeIndexEntry([node], traits.createAggregate(node.item))
+      index.set(name, entry)
+    }
+  }
+  return index
+}
+
+export class NodeSelection {
+  constructor () {
+    this.nodes = null
+    this.index = null
+  }
+  update (nodes, traits) {
+    if (nodes && nodes.length) {
+      this.nodes = nodes
+      this.index = createNodeNameIndex(nodes, traits)
+    } else {
+      this.reset()
+    }
+  }
+  reset () {
+    this.nodes = null
+    this.index = null
+  }
+}
+
 export class NodeHighlightClass {
   constructor (name, prefix) {
     this.name = name || null
     this.prefix = prefix || null
-    this._cluster = null
+    this._index = null
   }
   setName (name) {
     this.name = name
-    this._cluster = null
+    this._index = null
   }
-  getClass (index) {
-    return (this._cluster || this.generateCluster())[index]
+  getClass (mask) {
+    return (this._index || this.generateIndex())[mask]
   }
-  getCluster () {
-    return this._cluster || this.generateCluster()
+  getIndex () {
+    return this._index || this.generateIndex()
   }
-  generateCluster () {
+  generateIndex () {
     const name = this.prefix ? this.prefix + this.name : this.name
-    return (this._cluster = Array.from({length: 16}, (v, k) => name + k))
+    return (this._index = Array.from({length: 16}, (v, k) => name + k))
   }
 }
 
-export class NodeHighlighter {
-  constructor () {
-    this.mapping = new Map()
+// There are two types of hightlight currently:
+// 1. Explicit list of nodes to be highlighted. In this case, for highlighted hidden nodes need to walk tree up to find
+//    closest visible ancestor. Good for hightlights with small node count or when number of different hightlights is too large
+//    to have dedicated marks for each of them or node set changes too often to reuse same mark field, because computing marks
+//    and associated node list is same or greater computational effort as traversing tree once to find closest visible ancestors.
+// 2. Using node tree markings. This requires to update the entire tree (or its significant part) when marks change, traversing
+//    it from the top. When node visibility changes, list of actually hightlighted nodes must be created. Good for long lived
+//    hightlights where marks are updated less often and can be reused for some time.
+// This class only supports first hightlight type.
+export class NodeHighlight {
+  constructor (highlightClass) {
+    this.highlightClass = highlightClass
+    // This highlight can be un-applied and re-applied (see `toggle` method) as long as node tree is in the same revision.
+    // Also revision is used to tell what nodes are visible.
+    this.revision = null
+    this.classIndex = null
+    this.marks = null
+    this.enabled = false
   }
-  addNode (key, node) {
-    const mapping = this.mapping
-    let nodes = mapping.get(key)
-    if (nodes) {
-      nodes.push(node)
-    } else {
-      mapping.set(key, [node])
+  update (nodes, revision, enable) {
+    if (this.revision === revision && this.enabled) {
+      this.apply(false)
+    }
+    const empty = !nodes || !nodes.length
+    this.revision = revision
+    this.classIndex = empty ? null : this.highlightClass.getIndex()
+    this.marks = empty ? null : NodeHighlight.nodeMarks(nodes, revision)
+    this.enabled = null === enable ? this.enabled : !!enable
+    if (this.enabled) {
+      this.apply(true)
     }
   }
-  getHighlight (key, revision, highlightClass) {
-    const nodes = this.mapping.get(key)
-    if (!nodes) {
-      return null
+  reset () {
+    this.revision = null
+    this.classIndex = null
+    this.marks = null
+    this.enabled = false
+  }
+  toggle (revision, enable) {
+    const enabled = !!enable
+    if (this.enabled !== enabled) {
+      if (this.revision === revision) {
+        this.apply(enabled)
+      }
+      this.enabled = enabled
     }
+  }
+  // This is a low-level method that doesn't perform `revision` and `enabled` checks, assuming that
+  // caller did the homework. It also will not update `enabled` state.
+  apply (enable) {
+    if (this.marks) {
+      const classIndex = this.classIndex
+      this.marks.forEach(function (mark, node, map) {
+        node.element.classList.toggle(classIndex[mark], enable)
+      })
+    }
+  }
+  static nodeMarks (nodes, revision) {
     const marks = new Map()
     for (let i = nodes.length; 0 < i--;) {
       let node = nodes[i]
@@ -206,63 +416,7 @@ export class NodeHighlighter {
         }
       }
     }
-    return { key: key, revision: revision, cluster: highlightClass.getCluster(), marks: marks }
-  }
-  highlightKey (key, revision, highlightClass) {
-    const highlight = this.getHighlight(key, revision, highlightClass)
-    NodeHighlighter.applyHighlight(highlight, revision, true)
-    return highlight
-  }
-
-  highlightUpdate (highlight, revision, highlightClass) {
-    if (highlight) {
-      highlight = this.getHighlight(highlight.key, revision, highlightClass)
-      NodeHighlighter.applyHighlight(highlight, revision, true)
-    }
-    return highlight
-  }
-  static applyHighlight (highlight, revision, enable) {
-    if (highlight && revision === highlight.revision) {
-      const cluster = highlight.cluster
-      highlight.marks.forEach(function (mark, node, map) {
-        node.element.classList.toggle(cluster[mark], enable)
-      })
-    }
-  }
-}
-
-export function aggregateItems (roots, traits, aggregator) {
-  const traitsGetChildren = traits.getChildren
-  const traitsGetName = traits.getName
-  let children, i, item, level, name, recursive
-  const queue = []
-  for (let n = roots.length; n--;) {
-    children = traitsGetChildren.call(traits, roots[n])
-    if (children && (i = children.length)) {
-      while (i--) {
-        queue.push(children[i])
-      }
-    }
-  }
-  const aggregateRecursive = traits.selfValue
-  const levels = Array(queue.length).fill(0)
-  const callstack = new Callstack()
-  while ((item = queue.pop())) {
-    level = levels.pop()
-    name = traitsGetName.call(traits, item)
-    recursive = callstack.recursive(name)
-    if (aggregateRecursive || !recursive) {
-      aggregator(item, name, recursive)
-    }
-    children = traitsGetChildren.call(traits, item)
-    if (children && (i = children.length)) {
-      callstack.pop(level++)
-      callstack.push(name)
-      while (i--) {
-        queue.push(children[i])
-        levels.push(level)
-      }
-    }
+    return marks
   }
 }
 
@@ -311,6 +465,25 @@ export function markNodes (rootNodes, predicate) {
     }
   }
   return marked
+}
+
+export function selectNodes (rootNodes, predicate) {
+  const selected = []
+  let nodes, i, node, children
+  const queue = [rootNodes]
+  while ((nodes = queue.pop())) {
+    for (i = nodes.length; i--;) {
+      node = nodes[i]
+      if (predicate(node)) {
+        selected.push(node)
+      }
+      children = node.children
+      if (children && children.length) {
+        queue.push(children)
+      }
+    }
+  }
+  return selected
 }
 
 export function markedNodes (rootNodes) {
@@ -365,9 +538,16 @@ export function flamegraph () {
   const nodeFocusHighlightClass = new NodeHighlightClass('fg-fc', ' ')
   const nodeMarkHighlightClass = new NodeHighlightClass('fg-mk', ' ')
   const nodeHoverHighlightClass = new NodeHighlightClass('fg-hv')
-  let nodeNameHighlighter = null
-  let nodeHoverHighlight = null
+  const nodeSelectionHighlightClass = new NodeHighlightClass('fg-sl')
+  const nodeHoverHighlight = new NodeHighlight(nodeHoverHighlightClass)
+  const nodeSelectionHighlight = new NodeHighlight(nodeSelectionHighlightClass)
+  const nodeSelection = new NodeSelection()
+
+  let hoveredNode = null
+  let rootNodeIndex = null
+
   let itemTraits = new ItemTraits()
+  let selectionItems = null
 
   let nodeWidthSmall = 35
   let nodeClassBase = 'node'
@@ -424,19 +604,24 @@ export function flamegraph () {
   function aggregatedNodesByFlatteningItems (parentNode, rootItems) {
     const nodes = new Map()
     const traits = itemTraits
-    const traitsCreateAggregate = traits.createAggregate
-    const traitsAddAggregateItem = traits.addAggregateItem
-    aggregateItems(rootItems, itemTraits, function (item, name, recursive) {
-      let node = nodes.get(name)
-      if (!node) {
-        node = new Node(parentNode, traitsCreateAggregate.call(traits, item), name)
-        node.roots = [item]
-        node.dir = true
-        nodes.set(name, node)
-      } else {
-        traitsAddAggregateItem.call(traits, node.item, item)
-        if (!recursive) {
-          node.roots.push(item)
+    const aggregateRecursive = traits.selfValue
+    const callstack = new Callstack()
+    traits.preorderDFS(traits.collectSiblings(rootItems), function (item, level, hasChildren) {
+      const name = traits.getName(item)
+      callstack.pop(level)
+      const recursive = hasChildren ? callstack.push(name) : callstack.recursive(name)
+      if (aggregateRecursive || !recursive) {
+        let node = nodes.get(name)
+        if (!node) {
+          node = new Node(parentNode, traits.createAggregate(item), name)
+          node.roots = [item]
+          node.dir = true
+          nodes.set(name, node)
+        } else {
+          traits.addAggregateItem(node.item, item)
+          if (!recursive) {
+            node.roots.push(item)
+          }
         }
       }
     })
@@ -548,44 +733,57 @@ export function flamegraph () {
   }
 
   function resetView () {
-    nodeHoverHighlight = null
-    nodeNameHighlighter = null
+    hoveredNode = null
+    rootNodeIndex = null
+    nodeHoverHighlight.reset()
+    nodeSelectionHighlight.reset()
+    nodeSelection.reset()
     if (rootNode) {
       hierarchyView.recycle([rootNode])
     }
   }
 
   function createItemViewNode (datum) {
-    let name, nodes, i, node, itemChildren, k, nodeChildren, childItem, childNode
+    const rootIndex = new Map()
+    const selectedItems = selectionItems && selectionItems.size ? selectionItems : null
+    const selectedNodes = selectedItems ? [] : null
     const traits = itemTraits
-    const traitsGetName = traits.getName
-    const traitsGetChildren = traits.getChildren
-    nodeNameHighlighter = new NodeHighlighter()
-    const rootItem = traits.getRoot(datum)
-    const rootNode = new Node(null, rootItem, (name = traitsGetName.call(traits, rootItem)))
-    nodeNameHighlighter.addNode(name, rootNode)
-    const queue = [[rootNode]]
-    const siblingsList = []
-    while ((nodes = queue.pop())) {
-      for (i = nodes.length; i--;) {
-        node = nodes[i]
-        itemChildren = traitsGetChildren.call(traits, node.item)
-        if (itemChildren && (k = itemChildren.length)) {
-          // FIXME: We can preallocate size of this array, will it be better?
-          nodeChildren = []
-          while (k--) {
-            childItem = itemChildren[k]
-            childNode = new Node(node, childItem, (name = traitsGetName.call(traits, childItem)))
-            nodeNameHighlighter.addNode(name, childNode)
-            nodeChildren.push(childNode)
-          }
-          node.children = nodeChildren
-          queue.push(nodeChildren)
-          siblingsList.push(nodeChildren)
+    const nodes = []
+    const parents = [null]
+    const aggregateRecursive = traits.selfValue
+    const callstack = aggregateRecursive ? null : new Callstack()
+    traits.preorderDFS([traits.getRoot(datum)], function (item, level, hasChildren) {
+      const name = traits.getName(item)
+      const parent = parents[level]
+      const node = new Node(parent, item, name)
+      if (hasChildren) {
+        node.children = []
+        parents[level + 1] = node
+      } else {
+        node.children = null
+      }
+      if (parent) {
+        parent.children.push(node)
+      }
+      nodes.push(node)
+      const aggregate = callstack ? !(callstack.pop(level), hasChildren ? callstack.push(name) : callstack.recursive(name)) : true
+      if (aggregate) {
+        let indexEntry = rootIndex.get(name)
+        if (indexEntry) {
+          indexEntry.nodes.push(node)
+          traits.addAggregateItem(indexEntry.aggregate, item)
+        } else {
+          indexEntry = new NodeIndexEntry([node], traits.createAggregate(item))
+          rootIndex.set(name, indexEntry)
         }
       }
-    }
-    return rootNode
+      if (selectedItems && selectedItems.has(item)) {
+        selectedNodes.push(node)
+      }
+    })
+    rootNodeIndex = rootIndex
+    nodeSelection.update(selectedNodes, traits)
+    return nodes[0]
   }
 
   function createFlattenViewNode (datum) {
@@ -907,6 +1105,17 @@ export function flamegraph () {
   let clickHandler = null
   let viewRevision = 0
 
+  function updateHoverHighlight () {
+    let nodes = null
+    if (rootNodeIndex && hoveredNode && hoveredNode.rev === viewRevision) {
+      const indexEntry = rootNodeIndex.get(hoveredNode.name)
+      if (indexEntry) {
+        nodes = indexEntry.nodes
+      }
+    }
+    nodeHoverHighlight.update(nodes, viewRevision, true)
+  }
+
   function updateView () {
     const nodesRect = nodesElement.getBoundingClientRect()
     hierarchyLayout.totalWidth = nodesRect.width
@@ -914,10 +1123,10 @@ export function flamegraph () {
     const layout = hierarchyLayout.layout(rootNode, focusNode, ++viewRevision)
     nodesElement.style.height = layout.height + 'px'
     hierarchyView.render(layout)
+    updateHoverHighlight()
+    nodeSelectionHighlight.update(nodeSelection.nodes, viewRevision, true)
+    // FIXME: Looks like `searchController.updateView` does more then minimally required.
     searchController.updateView(focusNode)
-    if (nodeNameHighlighter) {
-      nodeHoverHighlight = nodeNameHighlighter.highlightUpdate(nodeHoverHighlight, viewRevision, nodeHoverHighlightClass)
-    }
   }
 
   const externalState = {
@@ -964,23 +1173,20 @@ export function flamegraph () {
   }
 
   function nodeMouseEnter (event) {
-    const node = this.__node__
-    NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, false)
-    if (nodeNameHighlighter) {
-      nodeHoverHighlight = nodeNameHighlighter.highlightKey(node.name, viewRevision, nodeHoverHighlightClass)
-    }
-    if (tooltipView.nodeTip) {
-      if (!(externalState.shiftKey && tooltipView.shown)) {
+    if (!externalState.shiftKey) {
+      const node = hoveredNode = this.__node__
+      if (tooltipView.nodeTip) {
         tooltipView.show(event, this, node, hierarchyView.context)
       }
+      updateHoverHighlight()
     }
   }
 
   function nodeMouseLeave (event) {
-    NodeHighlighter.applyHighlight(nodeHoverHighlight, viewRevision, false)
-    nodeHoverHighlight = null
     if (!externalState.shiftKey) {
+      hoveredNode = null
       tooltipView.hide()
+      updateHoverHighlight()
     }
   }
 
@@ -1144,6 +1350,23 @@ export function flamegraph () {
 
   chart.resetZoom = function () {
     zoom(rootNode)
+  }
+
+  chart.rootNameAggregate = function (name) {
+    return nodeIndexAggregate(rootNodeIndex, name)
+  }
+
+  chart.selectedNameAggregate = function (name) {
+    return nodeIndexAggregate(nodeSelection.index || rootNodeIndex, name)
+  }
+
+  chart.selectedItems = function (_) {
+    if (!arguments.length) { return selectionItems }
+    const selectedItems = selectionItems = _
+    const selectedNodes = rootNode && selectedItems && selectedItems.size ? selectNodes([rootNode], (node) => selectedItems.has(node.item)) : null
+    nodeSelection.update(selectedNodes, itemTraits)
+    nodeSelectionHighlight.update(nodeSelection.nodes, viewRevision, true)
+    return chart
   }
 
   return chart
