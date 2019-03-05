@@ -91,25 +91,25 @@
 /* Node is selected. */
 .flamegraph .fg-sl1 {
   background-image: repeating-linear-gradient(135deg,
-    rgba(0, 0, 256, 0.2), rgba(0, 0, 256, 0.2) 6px,
+    rgba(0, 0, 256, 0.3), rgba(0, 0, 256, 0.3) 6px,
     transparent 6px, transparent 18px,
-    rgba(0, 0, 256, 0.2) 18px, rgba(0, 0, 256, 0.2) 24px);
+    rgba(0, 0, 256, 0.3) 18px, rgba(0, 0, 256, 0.3) 24px);
 }
 
 /* Node has a selected descendant that is not visible. */
 .flamegraph .fg-sl8 {
   background-image: repeating-linear-gradient(135deg,
-    rgba(0, 0, 256, 0.2), rgba(0, 0, 256, 0.2) 6px,
+    rgba(0, 0, 256, 0.3), rgba(0, 0, 256, 0.3) 6px,
     transparent 6px, transparent 18px,
-    rgba(0, 0, 256, 0.2) 18px, rgba(0, 0, 256, 0.2) 24px);
+    rgba(0, 0, 256, 0.3) 18px, rgba(0, 0, 256, 0.3) 24px);
 }
 
 /* Node is selected AND has a selected descendant that is not visible. */
 .flamegraph .fg-sl9 {
   background-image: repeating-linear-gradient(135deg,
-    rgba(0, 0, 256, 0.2), rgba(0, 0, 256, 0.2) 6px,
+    rgba(0, 0, 256, 0.3), rgba(0, 0, 256, 0.3) 6px,
     transparent 6px, transparent 18px,
-    rgba(0, 0, 256, 0.2) 18px, rgba(0, 0, 256, 0.2) 24px);
+    rgba(0, 0, 256, 0.3) 18px, rgba(0, 0, 256, 0.3) 24px);
 }
 
 .flamegraph .tip {
