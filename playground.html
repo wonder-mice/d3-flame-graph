@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%; overflow: hidden;">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="dist/flamegraph.css">
+</head>
+<body style="height: 100%; display:flex; flex-direction: column; margin: 0;">
+  <div id="header" style="display:flex; flex: none">
+    <h2>🔥</h2>
+  </div>
+  <div id="deck" style="display:flex; flex: 1 1 auto"></div>
+  <script type = "text/javascript" src = "dist/flamegraph.js"></script>
+  <script type = "text/javascript" src = "playground-data.js"></script>
+  <script type="text/javascript">
+    // General settings
+    flamegraph.Metrics.enable()
+    // Traits
+    const structureTraits = new flamegraph.StructureTraits()
+    structureTraits.getName = (item) => { return item.n + '$' }
+    const costTraits = new flamegraph.CostTraits()
+    costTraits.recursion = false
+    const valueTraits = new flamegraph.CostTraits()
+    valueTraits.getValue = (cost) => { return cost.v * 2 }
+    // Deck
+    const deckOptions = new flamegraph.DeckOptions()
+    deckOptions.structureRoots = data
+    deckOptions.structureTraits = structureTraits
+    deckOptions.costTraits = costTraits
+    deckOptions.valueTraits = valueTraits
+    deckOptions.nodeTooltipContentCallback = (view, tooltip, node) => {
+      tooltip.body.innerText = 'Value: ' + node.cost.v
+      /*
+      tooltip.buttons
+      let btnSelect = tooltip.btnSelect
+      if (!btnSelect) {
+        btnSelect = tooltip.btnSelect = document.createElement('div')
+      }
+      btnSelect.enable
+      */
+    }
+    const deck = new flamegraph.Deck(document.getElementById('deck'), deckOptions)
+    // deck.setStructureRoots(data)
+    // deck.setStructureTraits(structureTraits)
+    // deck.setCostTraits(costTraits)
+    // deck.setValueTraits(valueTraits)
+    deck.setOrder((a, b) => { return a.cost.v < b.cost.v ? -1 : (a.cost.v > b.cost.v ? 1 : 0) })
+    // deck.setNodeTooltipCallback((view, tooltip, node, cost) => {
+    //   tooltip.header.innerText = node.name
+    //   tooltip.buttons
+    //   let btnSelect = tooltip.btnSelect
+    //   if (!btnSelect) {
+    //     btnSelect = tooltip.btnSelect = document.createElement('div')
+    //   }
+    //   btnSelect.enable
+    // })
+    deck.update()
+  </script>
+</body>
+</html>
