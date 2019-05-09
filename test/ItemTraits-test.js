@@ -31,7 +31,7 @@ const hierarchy = makeHierarchy([
 ])
 
 test('ItemTraits.collectSiblings() default implementation correctness', function (t) {
-    const traits = new flamegraph.ItemTraits()
+    const traits = new flamegraph.StructureTraits()
     const siblings = traits.collectSiblings(hierarchy)
     t.deepEqual(siblings.map((item, index, array) => item.path).sort(),
                 ['A/B', 'A/C', 'B/A', 'B/B', 'B/C'].sort())
@@ -47,7 +47,7 @@ test('ItemTraits.preorderDFS() default implementation correctness', function (t)
       {name: 'C', level: 1, hasChildren: false},
   ]
   let k = 0
-  const traits = new flamegraph.ItemTraits()
+  const traits = new flamegraph.StructureTraits()
   traits.preorderDFS([hierarchy[0]], function (item, level, hasChildren) {
       const expected = expectations[k++]
       t.equal(item.n, expected.name, 'name')
