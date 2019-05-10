@@ -14,7 +14,7 @@
   <script type = "text/javascript" src = "playground-data.js"></script>
   <script type="text/javascript">
     // General settings
-    flamegraph.Metrics.enable()
+    flamegraph.Metrics.enable(true, false, false)
     // Traits
     const structureTraits = new flamegraph.StructureTraits()
     structureTraits.getName = (item) => { return item.n + '$' }
