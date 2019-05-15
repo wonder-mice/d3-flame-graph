@@ -44,6 +44,11 @@ function defaultCollectSiblings (parents) {
   return result
 }
 
+function defaultNewCost () {
+  const cost = {}
+  return cost
+}
+
 function defaultCopyCost (cost) {
   const copy = {}
   const v = cost.v
@@ -53,30 +58,24 @@ function defaultCopyCost (cost) {
   return copy
 }
 
-function defaultAddCost (aggregate, cost, recursive) {
-  // FIXME: I'm not sure why `addRecursive` check is here, because based on
-  // FIXME: naive interpretation of comment for `addRecursive` contract is
-  // FIXME: such, that `addCost()` will not be called at all for recursive
-  // FIXME: costs when `addRecursive` is `false`. I.e. if `addRecursive` is
-  // FIXME: `false`, then `recursive` will be always `false` when this
-  // FIXME: function is called.
-  if (!recursive || this.addRecursive) {
-    const v = cost.v
-    const d = cost.d
-    if (v) { aggregate.v = (aggregate.v || 0) + v }
-    if (d) { aggregate.d = (aggregate.d || 0) + d }
-  }
+// When `direct` is `true`, direct cost of `cost` must be added to `aggregate` cost.
+// When `transitive` is `true`, transitive cost of `cost` must be added to `aggregate` cost.
+// Note, that both `direct` and `transitive` can be true in the same time, however they
+// can't be both `false`. You can control when `addCost()` will be called by specifying
+// `CostTraits.aggregatesDirect` and `CostTraits.aggregatesTransitive`. You only need
+// to set both to `true` when cost objects track both direct and transitive costs.
+function defaultAddCost (aggregate, cost, direct, transitive) {
+  const v = cost.v
+  const d = cost.d
+  if (v) { aggregate.v = (aggregate.v || 0) + v }
+  if (d) { aggregate.d = (aggregate.d || 0) + d }
 }
 
-function defaultSubCost (aggregate, cost) {
-  // FIXME: I'm not sure why `subRecursive` check is here, just followed the
-  // FIXME: same pattern as in `defaultAddCost()` (see detailed comment there).
-  if (this.subRecursive) {
-    const v = cost.v
-    const d = cost.d
-    if (v) { aggregate.v = (aggregate.v || 0) - v }
-    if (d) { aggregate.d = (aggregate.d || 0) - d }
-  }
+function defaultSubCost (aggregate, cost, direct, transitive) {
+  const v = cost.v
+  const d = cost.d
+  if (v) { aggregate.v = (aggregate.v || 0) - v }
+  if (d) { aggregate.d = (aggregate.d || 0) - d }
 }
 
 function defaultGetValue (cost) {
@@ -116,26 +115,15 @@ export class StructureTraits {
 
 export class CostTraits {
   constructor () {
-    // When `addRecursive` is `false`, `addCost()` will be only called for non-recursive costs
-    // (when `recursive` parameter is `false`). When `addRecursive` is `true`, `addCost()` will
-    // be called for both recursive and non-recursive costs with `recursive` parameter specifying
-    // whether cost is recursive. Set it to `false` when costs are exclusively transitive
-    // (non-direct). For direct and mixed (contains both direct and transitive values) costs set
-    // it to `true`.
-    // When `subRecursive` is `false`, `subCost()` will NOT be called. Set it to `true` when
-    // costs are transitive (non-direct) or mixed (contains both direct and transitive values).
-    // For direct costs set it to `false`.
-    // Summary:
-    //    Cost        | addRecursive | subRecursive
-    //   -------------+--------------+--------------
-    //     Mixed      |  true        |  true
-    //     Direct     |  true        |  false
-    //     Transitive |  false       |  true
-    //     Other*     |  false       |  false
-    // Last combination (*), while not generally practical, can be used for costs with unusual
-    // semantics.
-    this.addRecursive = false
-    this.subRecursive = true
+    // Cost objects can track direct cost (intrinsic item cost that doesn't include cost of
+    // item's children), transitive cost (intrinsic item cost plus cost of item's children) or
+    // both. When `aggregatesDirect` is `true`, `addCost()` or `subCost()` will be called when
+    // direct cost must be aggregated. When `aggregatesTransitive` is `true`, `addCost()` or
+    // `subCost()` will be when transitive cost must be aggregated.
+    this.aggregatesDirect = false
+    this.aggregatesTransitive = true
+    // Creates new empty cost.
+    this.newCost = defaultNewCost
     // Creates copy of cost instance.
     this.copyCost = defaultCopyCost
     // Adds cost to previously created copy.
