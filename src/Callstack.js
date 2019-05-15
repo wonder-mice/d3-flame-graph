@@ -29,4 +29,8 @@ export class Callstack {
     const record = this.frameCounts.get(frame)
     return record && 0 < record.n
   }
+  update (level, frame, persistent) {
+    this.pop(level)
+    return persistent ? this.push(frame) : this.recursive(frame)
+  }
 }
