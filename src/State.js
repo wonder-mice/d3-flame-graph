@@ -262,7 +262,7 @@ export class State {
     this.name = name
     this.action = action
     this.inputs = []
-    this.inputsChanged = 0
+    this.inputsChanged = 1
     this.outputInputs = []
     this.outputInputsMarked = 0
   }
