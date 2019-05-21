@@ -32,7 +32,7 @@ function outputSetClean (state) {
 function inputSetClean (input) {
   if (inputUnchanged !== input.status) {
     input.status = inputUnchanged
-    const state = this.consumer
+    const state = input.consumer
     if (!--state.inputsChanged) {
       outputSetClean(state)
     }
