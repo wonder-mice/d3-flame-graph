@@ -44,8 +44,71 @@
   bottom: 100%;
 }
 
-.flamegraph .nodes, .nodes-space {
+/* Buttons */
+.fg-btn {
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none;
+  user-select: none;
+  white-space: nowrap;
+  display: inline-block;
   position: relative;
+  cursor: pointer;  
+  color: #24292e;
+  border: 1px solid rgba(27, 31, 35, .2);
+  border-radius: .25em;
+  background-image: linear-gradient(-180deg, #fafbfc, #eff3f6 90%);
+  background-color: #eff3f6;
+  background-size: 110% 110%;
+  background-position: -1px -1px;
+  background-repeat: repeat-x;
+  vertical-align: middle;
+  /* Size specific properties */
+  font-size: 14px;
+  line-height: 20px;
+  padding: 6px 12px;
+}
+
+.fg-btn .fg-icon {
+  vertical-align: text-top;
+}
+
+.fg-btn:hover {
+  border-color: rgba(27, 31, 35, .35);
+  background-image: linear-gradient(-180deg, #f0f3f6, #e6ebf1 90%);
+  background-position: -.5em;
+  background-color: #e6ebf1;
+  text-decoration: none;
+}
+
+.fg-btn:focus {
+  outline: 0;
+  box-shadow: 0 0 0 .2em rgba(3, 102, 214, .3);
+}
+
+.fg-btn:disabled {
+  cursor: default;
+  color: rgba(36, 41, 46, .4);
+  border-color: rgba(27, 31, 35, .2);
+  background-image: none;
+  background-position: 0 0;
+  background-color: #eff3f6;
+  box-shadow: none;
+}
+
+.fg-btn:active {
+  border-color: rgba(27, 31, 35, .35);
+  background-image: none;
+  background-color: #e9ecef;
+  box-shadow: inset 0 .15em .3em rgba(27, 31, 35, .15)
+}
+
+.fg-btn-sm {
+  font-size: 11px;
+  line-height: 14px;
+  padding: 2px 8px
+}
+
 }
 
 .flamegraph .node, .node-sm {
