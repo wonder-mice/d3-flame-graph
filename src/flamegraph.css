@@ -1,6 +1,47 @@
-.flamegraph {
+/* Debug utilities (supposed to be used only during development) */
+.fg-debug-border-red {
+  outline: 1px solid red; 
+  outline-offset: -1px;
+}
+
+.fg-debug-border-blue {
+  outline: 1px solid blue; 
+  outline-offset: -1px;
+}
+
+/* Hover dropdowns. Usage (`sizing-class` is some class that defines items size):
+    <div class="fg-dropdown">
+        <element>[hoverable content]</element>
+        <div class="fg-dropdown-content fg-dropdown-content-rt">
+          <div class="fg-dropdown-box fg-dropdown-box-rt">
+            <element>[dropdown content]</element>
+            <div class="fg-dropdown-vertical-spacer"></div>
+            <element>[dropdown content]</element>
+            <div class="fg-dropdown-vertical-spacer"></div>
+            <element>[dropdown content]</element>
+          </div>
+        </div>
+    </div>
+*/
+.fg-dropdown {
   position: relative;
-  width: 100%;
+  overflow: hidden;
+}
+.fg-dropdown:hover {
+  overflow: visible;
+}
+.fg-dropdown-content {
+  position: absolute;
+  z-index: 4;
+  white-space: nowrap;
+}
+.fg-dropdown-content-rt {
+  right: 0;
+  top: 100%;
+}
+.fg-dropdown-content-lb {
+  left: 0;
+  bottom: 100%;
 }
 
 .flamegraph .nodes, .nodes-space {
