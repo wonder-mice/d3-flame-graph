@@ -221,13 +221,11 @@ function statesUpdate (states) {
 }
 
 export class StateInputTraits {
-  constructor (reset, update) {
-    this.attached = reset // (input) => {}
-    this.detached = reset // (input) => {}
-    this.consumed = reset // (input) => {}
-    this.reset = reset // (input) => {}
-    this.update = update // (input, value) => {}
-  }
+  static reset (input) { input.value = null }
+  static update (input, value) { input.value = value }
+  static attached (input) { this.reset(input) }
+  static detached (input) { this.reset(input) }
+  static consumed (input) { this.reset(input) }
 }
 
 // `StateInput` is a mechanism `State` can use to get fine grained information
