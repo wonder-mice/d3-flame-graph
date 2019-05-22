@@ -222,14 +222,14 @@ export class FlattenModel extends NodeModel {
     this.structureStateAddedSiblingsInput.cancel()
   }
   updateStructure (state) {
-    // This condition is redundant, since `updateStructureBase()` will cancel
-    // `structureStateAddedSiblingsInput`. Full condition for readability.
-    if (!this.structureStateBaseInput.changed && this.structureStateAddedSiblingsInput.changed) {
-      const addedSiblings = this.structureStateAddedSiblingsInput.value
-      if (addedSiblings && addedSiblings.length) {
-        state.send(addedSiblings)
-      } else {
-        state.cancel()
+    if (!this.structureStateBaseInput.changed) {
+      if (this.structureStateAddedSiblingsInput.changed) {
+        const addedSiblings = this.structureStateAddedSiblingsInput.value
+        if (addedSiblings && addedSiblings.length) {
+          state.send(addedSiblings)
+        } else {
+          state.cancel()
+        }
       }
     }
   }
