@@ -204,6 +204,9 @@ function statesCollect (states) {
 }
 
 function statesUpdate (states) {
+  if (Metrics.statesUpdate) {
+    Metrics.statesUpdate(...states)
+  }
   Metrics.begin('StateUpdate')
   const queue = statesCollect(states)
   const dirtyN = queue.length
