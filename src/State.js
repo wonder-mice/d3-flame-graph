@@ -220,6 +220,62 @@ function statesUpdate (states) {
   Metrics.end('' + updatedN + '/' + dirtyN + ' states updated')
 }
 
+export function statesPlot (states) {
+  const queue = states.slice()
+  for (let k = queue.length; k--;) {
+    const state = queue[k]
+    if (!state.outputInputsMarked++) {
+      const inputs = state.inputs
+      for (let i = inputs.length; i--;) {
+        const producer = inputs[i].producer
+        if (producer) { queue[k++] = producer }
+      }
+    }
+  }
+  const sorted = []
+  for (let k = states.length, n = sorted.length; k--;) {
+    const state = states[k]
+    if (!--state.outputInputsMarked) {
+      sorted[n++] = state
+      const inputs = state.inputs
+      for (let i = inputs.length; i--;) {
+        const producer = inputs[i].producer
+        if (producer) { states[k++] = producer }
+      }
+    }
+  }
+  let uid = 0
+  for (let k = sorted.length; k--;) {
+    sorted[k].uid = ++uid
+  }
+  let dot = '# State graph:\ndigraph G {\n'
+  for (let k = sorted.length; k--;) {
+    const state = sorted[k]
+    const stateName = `${state.name} (${state.uid})`
+    if (state.inputsChanged) {
+      dot += `    "${stateName}" [color=red]\n`
+    }
+    const inputs = state.inputs
+    for (let i = inputs.length; i--;) {
+      const input = inputs[i]
+      const status = input.status
+      const producer = input.producer
+      const producerName = producer ? `${producer.name} (${producer.uid})` : `None (${++uid})`
+      if (!producer) {
+        dot += `    "${producerName}" [color=grey]\n`
+      }
+      dot += `    "${producerName}" -> "${stateName}"`
+      if (inputUnchanged !== status) {
+        dot += ` [color=${inputChanged === status ? 'red' : 'orange'}]`
+      }
+      dot += '\n'
+    }
+    state.outputInputsMarked = 0
+  }
+  dot += '}\n'
+  return dot
+}
+
 export class StateInputTraits {
   static reset (input) { input.value = null }
   static update (input, value) { input.value = value }
@@ -319,4 +375,5 @@ export class State {
     outputSetClean(this)
   }
   static update (...states) { statesUpdate(states) }
+  static plot (...states) { return statesPlot(states) }
 }
