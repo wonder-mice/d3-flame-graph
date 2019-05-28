@@ -22,17 +22,17 @@ export class FlattenView {
     this.hoveredElementEvent = null
     this.hoveredElementState = new State('FlattenView::HoveredElement')
 
-    this.hoveredNode = null
-    this.hoveredNodeState = new State('FlattenView::HoveredNode', (state) => { this.updateHoveredNode(state) })
-    this.hoveredNodeStateLayoutInput = this.hoveredNodeState.input(this.layoutState)
-    this.hoveredNodeState.input(this.hoveredElementState)
-
     this.layout = new NodeLayout()
     this.layoutState = new State('FlattenView::Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(model.orderState)
     this.layoutState.input(model.valueState)
     this.layoutState.input(model.structureNodeState)
     this.layoutState.input(model.structureState)
+
+    this.hoveredNode = null
+    this.hoveredNodeState = new State('FlattenView::HoveredNode', (state) => { this.updateHoveredNode(state) })
+    this.hoveredNodeStateLayoutInput = this.hoveredNodeState.input(this.layoutState)
+    this.hoveredNodeState.input(this.hoveredElementState)
 
     const element = this.element = document.createElement('div')
     element.style.position = 'relative'
