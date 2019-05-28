@@ -30,7 +30,7 @@ export class FlattenModel {
     this.structureNode = null
     this.structureAddedSiblingNodes = []
 
-    this.rootNameState = new State('FlattenModel::Name')
+    this.rootNameState = new State('FlattenModel::RootName')
     this.structureRootsState = new State('FlattenModel::StructureRoots')
     this.structureTraitsState = new State('FlattenModel::StructureTraits')
     this.costTraitsState = new State('FlattenModel::CostTraits')
