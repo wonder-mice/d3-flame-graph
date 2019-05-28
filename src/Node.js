@@ -46,6 +46,11 @@ export class Node {
   }
 }
 
+export function nodeRoot (node) {
+  for (let parent = node; parent; parent = (node = parent).parent) {}
+  return node
+}
+
 export class NodeContext {
   constructor () {
     this.hasDelta = false
