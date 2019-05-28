@@ -51,6 +51,18 @@ export function nodeRoot (node) {
   return node
 }
 
+export function nodeNamed (nodes, name) {
+  if (nodes) {
+    for (let i = nodes.length; i--;) {
+      const node = nodes[i]
+      if (node.name === name) {
+        return node
+      }
+    }
+  }
+  return null
+}
+
 export class NodeContext {
   constructor () {
     this.hasDelta = false
