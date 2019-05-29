@@ -166,15 +166,18 @@ export class FlattenModel {
     const costTraits = this.costTraits
     const aggregatesDirect = costTraits.aggregatesDirect
     const aggregatesTransitive = costTraits.aggregatesTransitive
-    const rootCost = costTraits.newCost()
+    const aggregates = aggregatesDirect || aggregatesTransitive
+    const rootCost = aggregates ? costTraits.newCost() : null
     const rootNode = new Node(null, this.rootName || 'All', rootCost)
     rootNode.roots = structureRoots
     rootNode.self = 0
     rootNode.dir = true
-    for (let i = structureRoots.length; i--;) {
-      const root = structureRoots[i]
-      const cost = structureTraits.getCost(root)
-      costTraits.addCost(rootCost, cost, aggregatesDirect, aggregatesTransitive)
+    if (aggregates) {
+      for (let i = structureRoots.length; i--;) {
+        const root = structureRoots[i]
+        const cost = structureTraits.getCost(root)
+        costTraits.addCost(rootCost, cost, aggregatesDirect, aggregatesTransitive)
+      }
     }
     const rootNodes = [rootNode]
     this.siblingNodes = [rootNodes]
