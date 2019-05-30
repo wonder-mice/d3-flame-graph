@@ -1,27 +1,11 @@
 import {State} from './State'
-import {StructureTraits, CostTraits, ValueTraits} from './Item'
 import {TabView} from './TabView'
-import {DeckPage, DeckPageOptions} from './DeckPage'
-
-export class DeckOptions {
-  constructor () {
-    this.causalDomain = null
-    this.structureRoots = null
-    this.structureTraits = null
-    this.costTraits = null
-    this.valueTraits = null
-    this.nodeTooltipContentCallback = null
-  }
-}
+import {DeckPage} from './DeckPage'
 
 export class Deck {
-  constructor (parent, options) {
-    const causalDomain = this.causalDomain = (options && options.causalDomain) || new State('Deck::CausalDomain')
-    const nodeTooltipContentCallback = options && options.nodeTooltipContentCallback
-    const structureRoots = (options && options.structureRoots) || null
-    const structureTraits = (options && options.structureTraits) || new StructureTraits()
-    const costTraits = (options && options.costTraits) || new CostTraits()
-    const valueTraits = (options && options.valueTraits) || new ValueTraits()
+  constructor (parent, causalDomain) {
+    const state = this.state = new State('Deck::State')
+    causalDomain = this.causalDomain = causalDomain || state
 
     const element = this.element = document.createElement('div')
     element.style.width = '100%'
@@ -31,18 +15,10 @@ export class Deck {
     const tabView = this.tabView = new TabView(element)
     tabView.plusTab.element.innerHTML = '<svg fill="currentColor" style="vertical-align:middle" width="12" height="16" viewBox="0 0 12 16"><path fill-rule="evenodd" d="M12 9H7v5H5V9H0V7h5V2h2v5h5v2z"/></svg>'
     tabView.plusTab.element.addEventListener('click', (event) => {
-      this.addPage()
+      this.addPage('Selection')
     })
-
-    const masterPageOptions = new DeckPageOptions()
-    masterPageOptions.causalDomain = causalDomain
-    masterPageOptions.structureRoots = structureRoots
-    masterPageOptions.structureTraits = structureTraits
-    masterPageOptions.costTraits = costTraits
-    masterPageOptions.valueTraits = valueTraits
-    masterPageOptions.nodeTooltipContentCallback = nodeTooltipContentCallback
-    this.masterPage = this.addPage(masterPageOptions, 'Master')
-
+    const masterPage = this.masterPage = this.addPage('Master', causalDomain)
+    state.input(masterPage.state)
     if (parent) {
       parent.appendChild(element)
     }
@@ -62,16 +38,20 @@ export class Deck {
   setOrderFunction (orderFunction) {
     this.masterPage.setOrderFunction(orderFunction)
   }
+  setNodeTooltipContentCallback (nodeTooltipContentCallback) {
+    this.masterPage.setNodeTooltipContentCallback(nodeTooltipContentCallback)
+  }
   update () {
     this.causalDomain.update()
   }
-  addPage (options, name) {
+  addPage (name) {
     const tab = this.tabView.addTab(true)
     tab.element.innerText = name
     tab.element.addEventListener('click', (event) => {
+      // activate
     })
-    const page = new DeckPage(this.element, options)
-    this.causalDomain.input(page.state)
+    const page = new DeckPage(this.element)
+    this.state.input(page.state)
     return page
   }
 }
