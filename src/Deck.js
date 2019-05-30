@@ -15,21 +15,6 @@ export class DeckOptions {
 }
 
 export class Deck {
-  setStructureRoots (roots) {
-    this.masterPage.setStructureRoots(roots)
-  }
-  setStructureTraits (structureTraits) {
-    this.masterPage.setStructureTraits(structureTraits)
-  }
-  setCostTraits (costTraits) {
-    this.masterPage.setCostTraits(costTraits)
-  }
-  setValueTraits (valueTraits) {
-    this.masterPage.setValueTraits(valueTraits)
-  }
-  setOrderFunction (orderFunction) {
-    this.masterPage.setOrderFunction(orderFunction)
-  }
   constructor (parent, options) {
     const causalDomain = this.causalDomain = (options && options.causalDomain) || new State('Deck::CausalDomain')
     const nodeTooltipContentCallback = options && options.nodeTooltipContentCallback
@@ -56,11 +41,26 @@ export class Deck {
     masterPageOptions.costTraits = costTraits
     masterPageOptions.valueTraits = valueTraits
     masterPageOptions.nodeTooltipContentCallback = nodeTooltipContentCallback
-    this.addPage(masterPageOptions, 'Master')
+    this.masterPage = this.addPage(masterPageOptions, 'Master')
 
     if (parent) {
       parent.appendChild(element)
     }
+  }
+  setStructureRoots (roots) {
+    this.masterPage.setStructureRoots(roots)
+  }
+  setStructureTraits (structureTraits) {
+    this.masterPage.setStructureTraits(structureTraits)
+  }
+  setCostTraits (costTraits) {
+    this.masterPage.setCostTraits(costTraits)
+  }
+  setValueTraits (valueTraits) {
+    this.masterPage.setValueTraits(valueTraits)
+  }
+  setOrderFunction (orderFunction) {
+    this.masterPage.setOrderFunction(orderFunction)
   }
   update () {
     this.causalDomain.update()
@@ -70,9 +70,8 @@ export class Deck {
     tab.element.innerText = name
     tab.element.addEventListener('click', (event) => {
     })
-
     const page = new DeckPage(this.element, options)
-
     this.causalDomain.input(page.state)
+    return page
   }
 }
