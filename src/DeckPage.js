@@ -64,8 +64,6 @@ export class DeckPage {
     primaryElement.appendChild(primaryView.element)
     state.input(primaryView.state)
 
-    // primaryModel.orderFunctionState.action = (state) => { this.primaryModel.orderFunction = this.orderFunction }
-
     const secondaryModel = this.secondaryModel = new FlattenModel()
     secondaryModel.rootName = 'FIXME: Secondary root name'
     secondaryModel.setStructureTraits(new SelectedNodeStructureTraits())
