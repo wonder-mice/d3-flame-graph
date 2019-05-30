@@ -111,6 +111,13 @@ export class StructureTraits {
     // Given list of items as an array, returns array that contains all their direct children.
     this.collectSiblings = defaultCollectSiblings
   }
+  // These are just so `StructureTraits` class can be used as a traits object directly without
+  // need to create an instance of it.
+  static getName (item) { return defaultGetName(item) }
+  static getCost (item) { return defaultGetCost(item) }
+  static getChildren (item) { return defaultGetChildren(item) }
+  static preorderDFS (queue, callback) { return defaultPreorderDFS(queue, callback) }
+  static collectSiblings (parents) { return defaultCollectSiblings(parents) }
 }
 
 export class CostTraits {
