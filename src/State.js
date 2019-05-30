@@ -104,7 +104,25 @@ function inputAttach (input, producer) {
   producer.outputInputs.push(input)
   const traits = input.traits
   if (traits && traits.attached) {
-    traits.attached(input, producer)
+    traits.attached(input)
+  }
+}
+
+function inputDetach (input) {
+  const producer = input.producer
+  if (producer) {
+    const outputInputs = producer.outputInputs
+    for (let i = outputInputs.length; i--;) {
+      if (outputInputs[i] === input) {
+        outputInputs.splice(i, 1)
+        break
+      }
+    }
+    const traits = input.traits
+    if (traits && traits.detached) {
+      traits.detached(input)
+    }
+    input.producer = null
   }
 }
 
@@ -311,6 +329,9 @@ export class StateInput {
   // `unchanged` status downstream for all `pending` output inputs.
   cancel () {
     inputSetClean(this)
+  }
+  detach () {
+    inputDetach(this)
   }
 }
 
