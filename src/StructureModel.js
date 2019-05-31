@@ -6,6 +6,7 @@ export class StructureModel {
     this.rootName = null
     this.structureRoots = null
     this.structureTraits = null
+    this.structureCoalescing = false
     this.costTraits = null
     this.valueTraits = null
     this.orderFunction = null
@@ -34,6 +35,10 @@ export class StructureModel {
   }
   setRootName (name) {
     this.rootName = name
+    const rootNode = this.rootNode
+    if (rootNode) {
+      rootNode.name = name
+    }
     this.rootNameState.invalidate()
   }
   setStructureRoots (roots) {
@@ -43,6 +48,12 @@ export class StructureModel {
   setStructureTraits (traits) {
     this.structureTraits = traits
     this.structureTraitsState.invalidate()
+  }
+  setStructureCoalescing (coalescing) {
+    if (coalescing !== this.structureCoalescing) {
+      this.structureCoalescing = coalescing
+      this.structureState.invalidate()
+    }
   }
   setCostTraits (traits) {
     this.costTraits = traits
@@ -57,6 +68,13 @@ export class StructureModel {
     this.orderFunctionState.invalidate()
   }
   create () {
+    if (this.structureCoalescing) {
+      this.createCoalesedStructure()
+    } else {
+      this.createStructure()
+    }
+  }
+  createStructure () {
     const structureTraits = this.structureTraits
     const structureRoots = this.structureRoots
     const structureRootCount = structureRoots ? structureRoots.length : 0
@@ -98,6 +116,57 @@ export class StructureModel {
       }
     }
     this.rootNode = rootNodes.length ? rootNodes[0] : null
+    this.siblingNodes = siblingNodes
+  }
+  createCoalesedStructure () {
+    const structureTraits = this.structureTraits
+    const structureRoots = this.structureRoots
+    const costTraits = this.costTraits
+    const aggregatesDirect = costTraits.aggregatesDirect
+    const aggregatesTransitive = costTraits.aggregatesTransitive
+    const aggregates = aggregatesDirect || aggregatesTransitive
+    const rootCost = aggregates ? costTraits.newCost() : null
+    const rootNode = new Node(null, this.rootName || 'All', rootCost)
+    if (aggregates) {
+      for (let i = structureRoots.length; i--;) {
+        const root = structureRoots[i]
+        const cost = structureTraits.getCost(root)
+        costTraits.addCost(rootCost, cost, aggregatesDirect, aggregatesTransitive)
+      }
+    }
+    const siblingNodes = [[rootNode]]
+    const parents = [rootNode]
+    structureTraits.preorderDFS(structureTraits.collectSiblings(structureRoots), function (item, level, hasChildren) {
+      const parent = parents[level]
+      const name = structureTraits.getName(item)
+      const cost = structureTraits.getCost(item)
+      let siblings = parent.children
+      let node = null
+      let map
+      if (!siblings) {
+        siblingNodes.push(siblings = parent.children = [])
+        map = siblings.map = new Map()
+      } else {
+        map = siblings.map
+        node = map.get(name)
+        if (node && aggregates) {
+          costTraits.addCost(node.cost, cost, aggregatesDirect, aggregatesTransitive)
+        }
+      }
+      if (!node) {
+        node = new Node(parent, name, aggregates ? costTraits.copyCost(cost) : null)
+        siblings.push(node)
+        map.set(name, node)
+      }
+      if (hasChildren) {
+        parents[level + 1] = node
+      }
+    })
+    for (let k = siblingNodes.length; k--;) {
+      const siblings = siblingNodes[k]
+      delete siblings.map
+    }
+    this.rootNode = rootNode
     this.siblingNodes = siblingNodes
   }
   appraise () {
