@@ -24,6 +24,28 @@ function outputSetClean (state) {
   }
 }
 
+// Set status of each `unchanged` output input to `pending`. If state that owns
+// the input (consumer) previosuly had all its inputs `unchanged` (was clean),
+// repeat procedure recursively for all output inputs of this state. Note, that
+// if input is `changed`, it will remain changed (because `changed` is `dirty`
+// too).
+function outputSetDirty (state) {
+  const queue = [state.outputInputs]
+  for (let k = queue.length; k--;) {
+    const outputInputs = queue[k]
+    for (let i = outputInputs.length; i--;) {
+      const input = outputInputs[i]
+      if (inputUnchanged === input.status) {
+        input.status = inputPending
+        const consumer = input.consumer
+        if (!consumer.inputsChanged++) {
+          queue[k++] = consumer.outputInputs
+        }
+      }
+    }
+  }
+}
+
 // Sets input status to `unchanged`. If this causes owning state (consumer) to
 // have no `dirty` inputs, calls `outputSetClean()` on it to mark its output
 // inputs as clean. Behavior is different (but only for provided `input`) from
@@ -35,31 +57,6 @@ function inputSetClean (input) {
     const state = input.consumer
     if (!--state.inputsChanged) {
       outputSetClean(state)
-    }
-  }
-}
-
-// Set status of each `unchanged` output input to `pending`. If state that owns
-// the input (consumer) previosuly had all its inputs `unchanged` (was clean),
-// repeat procedure recursively for all output inputs of this state. Note, that
-// if input is `changed`, it will remain changed (because `changed` is `dirty`
-// too).
-function outputSetDirty (state) {
-  // console.log('Invalidate (start): ' + state.name)
-  const queue = [state.outputInputs]
-  for (let k = queue.length; k--;) {
-    const outputInputs = queue[k]
-    for (let i = outputInputs.length; i--;) {
-      const input = outputInputs[i]
-      // console.log('Invalidate (input consumer, status ' + input.status + '): ' + (input.consumer && input.consumer.name))
-      if (inputUnchanged === input.status) {
-        input.status = inputPending
-        const consumer = input.consumer
-        if (!consumer.inputsChanged++) {
-          // console.log('Invalidate (consumer): ' + consumer.name)
-          queue[k++] = consumer.outputInputs
-        }
-      }
     }
   }
 }
@@ -79,64 +76,48 @@ function inputSetDirty (input) {
   input.status = inputChanged
 }
 
-function inputConsume (input) {
+function inputPerformSend (input, value) {
   const traits = input.traits
-  if (traits && traits.consumed) {
-    traits.consumed(input)
-  }
+  if (traits && traits.send) { traits.send(input, value) }
 }
 
-function inputReset (input) {
+function inputPerformReset (input) {
   const traits = input.traits
-  if (traits && traits.reset) {
-    traits.reset(input)
-  }
+  if (traits && traits.reset) { traits.reset(input) }
 }
 
-function inputUpdate (input, value) {
+function inputPerformConsume (input) {
   const traits = input.traits
-  if (traits && traits.update) {
-    traits.update(input, value)
-  }
+  if (traits && traits.consume) { traits.consume(input) }
 }
 
-function inputAttach (input, producer) {
+function inputPerformAttach (input) {
+  const traits = input.traits
+  if (traits && traits.attach) { traits.attach(input) }
+}
+
+function inputPerformDetach (input) {
+  const traits = input.traits
+  if (traits && traits.detach) { traits.detach(input) }
+}
+
+function inputAttachProducer (input, producer) {
   producer.outputInputs.push(input)
-  const traits = input.traits
-  if (traits && traits.attached) {
-    traits.attached(input)
-  }
+  inputPerformAttach(input)
 }
 
-function inputDetach (input) {
-  const producer = input.producer
-  if (producer) {
-    const outputInputs = producer.outputInputs
-    for (let i = outputInputs.length; i--;) {
-      if (outputInputs[i] === input) {
-        outputInputs.splice(i, 1)
-        break
-      }
+function inputDetachProducer (input, producer) {
+  inputPerformDetach(input)
+  const outputInputs = producer.outputInputs
+  for (let i = outputInputs.length; i--;) {
+    if (input === outputInputs[i]) {
+      outputInputs.splice(i, 1)
+      break
     }
-    const traits = input.traits
-    if (traits && traits.detached) {
-      traits.detached(input)
-    }
-    input.producer = null
   }
 }
 
-function stateConsumeInputs (state) {
-  const inputs = state.inputs
-  for (let i = inputs.length; i--;) {
-    const input = inputs[i]
-    input.status = inputUnchanged
-    inputConsume(input)
-  }
-  state.inputsChanged = 0
-}
-
-function stateProduceOutput (state, value) {
+function outputSend (state, value) {
   const outputInputs = state.outputInputs
   for (let i = outputInputs.length; i--;) {
     const input = outputInputs[i]
@@ -144,7 +125,7 @@ function stateProduceOutput (state, value) {
     // That's because callback must be able to reliably assign latest value to
     // all of them, while their status is just whether consumer will interpret
     // updated value as a new one.
-    inputUpdate(input, value)
+    inputPerformSend(input, value)
     // However, output input status will be updated to `changed` only if it's
     // still `pending`, because:
     // - Callback is allowed to explicitly set `unchanged` status on certain
@@ -163,24 +144,33 @@ function stateProduceOutput (state, value) {
   }
 }
 
-function stateProduceOutputReset (state) {
+function outputReset (state) {
   const outputInputs = state.outputInputs
   for (let i = outputInputs.length; i--;) {
     const input = outputInputs[i]
-    // See comment in `stateProduceOutput()` on why we keep `unchanged` inputs
-    // unchanged.
+    // See comment in `outputSend()` on why we keep `unchanged` inputs unchanged.
     if (inputPending === input.status) {
       input.status = inputChanged
-      inputReset(input)
+      inputPerformReset(input)
     }
   }
+}
+
+function stateValidate (state) {
+  const inputs = state.inputs
+  for (let i = inputs.length; i--;) {
+    const input = inputs[i]
+    input.status = inputUnchanged
+    inputPerformConsume(input)
+  }
+  state.inputsChanged = 0
 }
 
 function stateUpdate (state) {
   const action = state.action
   if (!action || (action(state), state.inputsChanged)) {
-    stateProduceOutputReset(state)
-    stateConsumeInputs(state)
+    outputReset(state)
+    stateValidate(state)
   }
 }
 
@@ -298,11 +288,11 @@ export function statesPlot (states) {
 }
 
 export class StateInputTraits {
+  static send (input, value) { input.value = value }
   static reset (input) { input.value = null }
-  static update (input, value) { input.value = value }
-  static attached (input) { this.reset(input) }
-  static detached (input) { this.reset(input) }
-  static consumed (input) { this.reset(input) }
+  static consume (input) { this.reset(input) }
+  static attach (input) { this.reset(input) }
+  static detach (input) { this.reset(input) }
 }
 
 // `StateInput` is a mechanism `State` can use to get fine grained information
@@ -322,16 +312,23 @@ export class StateInput {
     return inputChanged === this.status
   }
   send (value) {
-    inputUpdate(this, value)
+    inputPerformSend(this, value)
     inputSetDirty(this)
   }
-  // Regardles of current status, sets it to `unchanged` and propagates
-  // `unchanged` status downstream for all `pending` output inputs.
   cancel () {
+    // Regardles of current status, sets it to `unchanged` and propagates
+    // `unchanged` status downstream for all `pending` output inputs.
     inputSetClean(this)
   }
+  attach (producer) {
+    this.producer = producer
+    inputSetDirty(this)
+    inputAttachProducer(this, producer)
+  }
   detach () {
-    inputDetach(this)
+    inputDetachProducer(this, this.producer)
+    inputSetClean(this)
+    this.producer = null
   }
 }
 
@@ -358,19 +355,20 @@ export class State {
       outputSetDirty(this)
     }
     if (producer) {
-      inputAttach(input, producer)
+      inputAttachProducer(input, producer)
     }
     return input
   }
-  setter (callback) {
-    const input = new StateInput(this)
-    this.inputs.push(input)
-    if (!this.inputsChanged++) {
-      outputSetDirty(this)
+  remove (input) {
+    if (inputUnchanged !== input.status && !--this.inputsChanged) {
+      outputSetClean(this)
     }
-    return (value) => {
-      callback(value)
-      inputSetDirty(input)
+    const inputs = this.inputs
+    for (let i = inputs.length; i--;) {
+      if (inputs[i] === input) {
+        inputs.splice(i, 1)
+        break
+      }
     }
   }
   get dirty () {
@@ -388,13 +386,13 @@ export class State {
   // Must only be used
   send (value) {
     if (this.inputsChanged) {
-      stateConsumeInputs(this)
+      stateValidate(this)
     }
-    stateProduceOutput(this, value)
+    outputSend(this, value)
   }
   cancel () {
     if (this.inputsChanged) {
-      stateConsumeInputs(this)
+      stateValidate(this)
     }
     outputSetClean(this)
   }
