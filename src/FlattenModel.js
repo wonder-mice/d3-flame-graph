@@ -55,6 +55,10 @@ export class FlattenModel {
   }
   setRootName (name) {
     this.rootName = name
+    const rootNode = this.rootNode
+    if (rootNode) {
+      rootNode.name = name
+    }
     this.rootNameState.invalidate()
   }
   setStructureRoots (roots) {
