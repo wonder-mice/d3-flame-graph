@@ -91,6 +91,9 @@ export class DeckPage {
   setStructureTraits (structureTraits) {
     this.primaryModel.setStructureTraits(structureTraits)
   }
+  setStructureCoalescing (coalescing) {
+    this.primaryModel.setStructureCoalescing(coalescing)
+  }
   setCostTraits (costTraits) {
     this.primaryModel.setCostTraits(costTraits)
     this.secondaryModel.setCostTraits(costTraits)
