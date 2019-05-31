@@ -129,8 +129,8 @@ export class NodeStyle {
     this.hoverHighlightClass = new NodeHighlightClass('fg-hv')
     this.selectionHighlightClass = new NodeHighlightClass('fg-sl')
     this.smallWidth = 35
-    this.baseClass = 'node'
-    this.baseClassSmall = 'node-sm'
+    this.baseClass = 'fg-node'
+    this.baseClassSmall = 'fg-node-sm'
   }
 }
 
