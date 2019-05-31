@@ -12,14 +12,6 @@ export class TabViewItem {
     style.borderTop = '3px solid transparent'
     style.borderColor = '#e36209 #e1e4e8 transparent'
     this.setActive(active)
-
-    /*
-    const contentElement = this.contentElement = document.createElement('div')
-    const contentElementStyle = contentElement.style
-    contentElementStyle.width = '100%'
-    contentElementStyle.position = 'relative'
-    contentElementStyle.display = 'flex'
-    */
   }
   setActive (active) {
     if (active) {
@@ -44,33 +36,20 @@ export class TabView {
     const tabsElement = this.tabsElement = element.appendChild(document.createElement('div'))
     tabsElement.style.position = 'relative'
     tabsElement.style.top = '1px'
-    const plusTab = this.plusTab = new TabViewItem(false)
-    tabsElement.appendChild(plusTab.element)
-    this.activeTab = plusTab
     if (parent) {
       parent.appendChild(element)
     }
   }
-  addTab (active) {
+  addTab (before, active) {
     const tab = new TabViewItem(active)
-    this.tabsElement.insertBefore(tab.element, this.plusTab.element)
+    if (before) {
+      this.tabsElement.insertBefore(tab.element, before.element)
+    } else {
+      this.tabsElement.appendChild(tab.element)
+    }
     return tab
   }
   removeTab (tab) {
-    if (tab === this.activeTab) {
-      // FIXME: Maybe find another active tab?
-      this.activeTab = null
-    }
     this.tabsElement.removeChild(tab.element)
-  }
-  setActive (tab) {
-    const activeTab = this.activeTab
-    if (activeTab) {
-      activeTab.setActive(false)
-    }
-    if (tab) {
-      tab.setActive(true)
-    }
-    this.activeTab = tab
   }
 }
