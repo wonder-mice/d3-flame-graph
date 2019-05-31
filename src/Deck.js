@@ -4,9 +4,19 @@ import {DeckPage} from './DeckPage'
 import {NodeSelectionStructureTraits} from './NodeSelection'
 
 class DeckItem {
-  constructor (tab, page) {
+  constructor (tab, page, input) {
     this.tab = tab
     this.page = page
+    this.input = input
+  }
+  setActive (active) {
+    this.page.element.style.display = active ? 'flex' : 'none'
+    this.tab.setActive(active)
+    if (active) {
+      this.input.attach(this.page.state)
+    } else {
+      this.input.detach()
+    }
   }
 }
 
@@ -75,18 +85,18 @@ export class Deck {
     const activeItem = this.activeItem
     if (activeItem !== item) {
       if (activeItem) {
-        activeItem.page.element.style.display = 'none'
-        activeItem.tab.setActive(false)
+        activeItem.setActive(false)
       }
-      item.page.element.style.display = 'flex'
-      item.tab.setActive(true)
+      if (item) {
+        item.setActive(true)
+      }
       this.activeItem = item
     }
   }
   addPage (page, name) {
-    this.state.input(page.state)
+    const input = this.state.input()
     const tab = this.tabView.addTab(this.plusTab, false)
-    const item = new DeckItem(tab, page)
+    const item = new DeckItem(tab, page, input)
     this.items.push(item)
     tab.element.addEventListener('click', (event) => { this.onItemTabClick(item) })
     tab.element.innerText = name
