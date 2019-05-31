@@ -3,7 +3,7 @@ import {Callstack} from './Callstack'
 import {Node, nodeNamed} from './Node'
 
 export class StructureStateAddedSiblingsTraits extends StateInputTraits {
-  static update (input, value) {
+  static send (input, value) {
     const accumulator = input.value
     if (accumulator) {
       for (let x = accumulator.length, y = 0, n = value.length; y < n; ++x, ++y) {
