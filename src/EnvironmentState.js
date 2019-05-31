@@ -13,10 +13,10 @@ function textSelected () {
 
 function onKeyUpDown (event) {
   switch (event.type) {
-    case 'keydown':
-    case 'keyup':
-      EnvironmentState.shiftKey = event.shiftKey
-      break
+  case 'keydown':
+  case 'keyup':
+    EnvironmentState.shiftKey = event.shiftKey
+    break
   }
 }
 
