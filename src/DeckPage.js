@@ -77,8 +77,8 @@ export class DeckPage {
     splitView.resized = () => {
       // FIXME: It could be benificial to have a `width` input for layout state,
       // FIXME: so it can benefit from knowledge that only width changed.
-      this.primaryView.layoutState.invalidate()
-      this.secondaryView.layoutState.invalidate()
+      this.primaryView.setResized()
+      this.secondaryView.setResized()
       this.causalDomain.update()
     }
     if (parent) {

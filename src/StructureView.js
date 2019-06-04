@@ -1,8 +1,8 @@
 import {State} from './State'
-import {StateUpdater} from './StateUpdater'
 import {nodeIndexNodes, createNodeNameIndex} from './NodeIndex'
 import {NodeLayout} from './NodeLayout'
 import {NodeRenderer} from './NodeRenderer'
+import {NodeView} from './NodeView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
 import {EnvironmentState} from './EnvironmentState'
@@ -15,11 +15,12 @@ export class StructureViewOptions {
   }
 }
 
-export class StructureView {
+export class StructureView extends NodeView {
   constructor (model, options) {
+    super(options && options.causalDomain)
+    const causalDomain = this.causalDomain
+    const element = this.element
     this.model = model
-    this.state = new State('StructureView::State')
-    const causalDomain = this.causalDomain = (options && options.causalDomain) || this.state
 
     this.rootIndexState = new State('StructureView::RootIndex', (state) => { this.updateRootIndex(state) })
     this.rootIndexState.input(model.structureState)
@@ -34,11 +35,9 @@ export class StructureView {
     this.layoutState = new State('StructureView::Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(model.orderState)
     this.layoutState.input(model.valueState)
+    this.layoutState.input(this.layoutWidthState)
     this.layoutState.input(this.focusedNodeState)
 
-    const element = this.element = document.createElement('div')
-    element.style.position = 'relative'
-    element.style.overflow = 'hidden'
     const renderer = this.renderer = new NodeRenderer(element)
     const view = this // Because `this` in listener function will be set to HTML element object
     renderer.nodeClickListener = function (event) { view.onNodeClick(this, event) }
@@ -78,32 +77,12 @@ export class StructureView {
     this.tooltipPositionState.input(this.hoveredElementState)
     this.tooltipPositionStateHoveredNodeInput = this.tooltipPositionState.input(this.hoveredNodeState)
 
-    this.layoutWidthState = new State('StructureView::LayoutWidth', (state) => { this.updateLayoutWidth(state) })
-    this.layoutState.input(this.layoutWidthState)
-
     this.state.input(this.renderState)
     this.state.input(this.hoverHighlightState)
     this.state.input(this.tooltipPositionState)
 
-    const stateUpdater = StateUpdater.updater(causalDomain)
-    const layoutWidthChanged = (width) => {
-      if (width !== this.layout.totalWidth) {
-        this.layoutWidthState.invalidate()
-        stateUpdater.update(1000, 100)
-      }
-    }
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver((entries) => { layoutWidthChanged(entries[0].contentRect.width) })
-      this.resizeObserver.observe(this.element)
-    } else {
-      window.addEventListener('resize', () => { layoutWidthChanged(this.element.getBoundingClientRect().width) })
-    }
-
     this.revision = 0
     this.rootIndex = null
-  }
-  setResized () {
-    this.layoutWidthState.invalidate()
   }
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
@@ -135,18 +114,10 @@ export class StructureView {
     const model = this.model
     this.rootIndex = createNodeNameIndex([model.rootNode], model.costTraits)
   }
-  updateLayoutWidth (state) {
-    const layout = this.layout
-    const width = this.element.getBoundingClientRect().width
-    if (layout.totalWidth !== width) {
-      layout.totalWidth = width
-    } else {
-      state.cancel()
-    }
-  }
   updateLayout (state) {
     const model = this.model
     const layout = this.layout
+    layout.totalWidth = this.layoutWidth
     layout.hasDelta = model.valueTraits.delta
     this.layoutResult = layout.layout([model.rootNode], this.focusedNode, ++this.revision)
   }

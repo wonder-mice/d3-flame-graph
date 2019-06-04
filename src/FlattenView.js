@@ -1,6 +1,7 @@
 import {State} from './State'
 import {NodeLayout} from './NodeLayout'
 import {NodeRenderer} from './NodeRenderer'
+import {NodeView} from './NodeView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
 import {EnvironmentState} from './EnvironmentState'
@@ -12,11 +13,12 @@ export class FlattenViewOptions {
   }
 }
 
-export class FlattenView {
+export class FlattenView extends NodeView {
   constructor (model, options) {
+    super(options && options.causalDomain)
+    const causalDomain = this.causalDomain
+    const element = this.element
     this.model = model
-    this.state = new State('FlattenView::State')
-    const causalDomain = this.causalDomain = (options && options.causalDomain) || this.state
 
     this.hoveredElement = null
     this.hoveredElementEvent = null
@@ -28,15 +30,13 @@ export class FlattenView {
     this.layoutState.input(model.valueState)
     this.layoutState.input(model.structureNodeState)
     this.layoutState.input(model.structureState)
+    this.layoutState.input(this.layoutWidthState)
 
     this.hoveredNode = null
     this.hoveredNodeState = new State('FlattenView::HoveredNode', (state) => { this.updateHoveredNode(state) })
     this.hoveredNodeStateLayoutInput = this.hoveredNodeState.input(this.layoutState)
     this.hoveredNodeState.input(this.hoveredElementState)
 
-    const element = this.element = document.createElement('div')
-    element.style.position = 'relative'
-    element.style.overflow = 'hidden'
     const renderer = this.renderer = new NodeRenderer(element)
     const view = this // Because `this` in listener function will be set to HTML element object
     renderer.nodeClickListener = function (event) { view.onNodeClick(this, event) }
@@ -90,10 +90,8 @@ export class FlattenView {
   }
   updateLayout (state) {
     const model = this.model
-    const element = this.element
-    const rect = element.getBoundingClientRect()
     const layout = this.layout
-    layout.totalWidth = rect.width
+    layout.totalWidth = this.layoutWidth
     layout.hasDelta = model.valueTraits.delta
     this.layoutResult = layout.layout([model.rootNode], model.structureNode, ++this.revision)
   }
