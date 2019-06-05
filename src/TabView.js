@@ -3,10 +3,7 @@ export class TabViewItem {
     const element = this.element = document.createElement('div')
     const style = element.style
     style.float = 'left'
-    style.userSelect = 'none'
-    style.cursor = 'pointer'
     style.whiteSpace = 'nowrap'
-    style.padding = '2px 12px 2px'
     style.border = '1px solid transparent'
     style.borderRadius = '3px 3px 0 0'
     style.borderTop = '3px solid transparent'
