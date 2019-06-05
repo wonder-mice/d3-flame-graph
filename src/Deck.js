@@ -2,12 +2,15 @@ import {State} from './State'
 import {TabView} from './TabView'
 import {DeckPage} from './DeckPage'
 import {NodeSelectionStructureTraits} from './NodeSelection'
+import {EnvironmentState} from './EnvironmentState'
 
 class DeckItem {
   constructor (tab, page, input) {
     this.tab = tab
     this.page = page
     this.input = input
+    this.tabButtonElement = null
+    this.tabTitleElement = null
   }
   setActive (active) {
     this.page.element.style.display = active ? 'flex' : 'none'
@@ -37,14 +40,15 @@ export class Deck {
 
     const tabView = this.tabView = new TabView(element)
     const plusTab = this.plusTab = tabView.addTab(null, false)
-    plusTab.element.addEventListener('click', (event) => { this.onPlusTabClick() })
-    plusTab.element.innerHTML = (
-`<svg fill="currentColor" style="vertical-align: middle" width="12" height="16" viewBox="0 0 12 16">
+    const plusTabElement = plusTab.element
+    plusTabElement.classList.add('fg-deck-tab')
+    plusTabElement.addEventListener('click', (event) => { this.onPlusTabClick() })
+    plusTabElement.innerHTML = (
+`<svg fill="currentColor" class="fg-deck-tab-plus" width="12" height="16" viewBox="0 0 12 16">
   <path fill-rule="evenodd" d="M12 9H7v5H5V9H0V7h5V2h2v5h5v2z"/>
 </svg>`)
 
-    const masterPage = this.masterPage = new DeckPage(this.element, this.causalDomain)
-    const masterItem = this.masterItem = this.addPage(masterPage, 'Master')
+    const masterItem = this.masterItem = this.newMasterItem()
     this.setActiveItem(masterItem)
 
     if (parent) {
@@ -52,10 +56,10 @@ export class Deck {
     }
   }
   setStructureRoots (roots) {
-    this.masterPage.setStructureRoots(roots)
+    this.masterItem.page.setStructureRoots(roots)
   }
   setStructureTraits (structureTraits) {
-    this.masterPage.setStructureTraits(structureTraits)
+    this.masterItem.page.setStructureTraits(structureTraits)
   }
   setCostTraits (costTraits) {
     for (let items = this.items, i = items.length; i--;) {
@@ -81,6 +85,52 @@ export class Deck {
   update () {
     this.causalDomain.update()
   }
+  newItem (page) {
+    const input = this.state.input()
+    const tab = this.tabView.addTab(this.plusTab, false)
+    const tabElement = tab.element
+    const item = new DeckItem(tab, page, input)
+    this.items.push(item)
+    const buttonId = EnvironmentState.newId('deck-tab-btn')
+    const titleId = EnvironmentState.newId('deck-tab-title')
+    tabElement.addEventListener('click', (event) => { this.onItemTabClick(item) })
+    tabElement.classList.add('fg-deck-tab')
+    tabElement.innerHTML = `<svg id="${buttonId}" class="fg-deck-tab-btn" viewBox="0 0 12 16"></svg><span id="${titleId}" class="fg-deck-tab-title"></span>`
+    item.tabButtonElement = tabElement.querySelector('#' + buttonId)
+    item.tabTitleElement = tabElement.querySelector('#' + titleId)
+    return item
+  }
+  newMasterItem () {
+    const page = new DeckPage(this.element, this.causalDomain)
+    const item = this.newItem(page)
+    item.tabTitleElement.innerText = 'Master'
+    item.tabButtonElement.innerHTML = '<path fill-rule="evenodd" d="M10.24 7.4a4.15 4.15 0 0 1-1.2 3.6 4.346 4.346 0 0 1-5.41.54L4.8 10.4.5 9.8l.6 4.2 1.31-1.26c2.36 1.74 5.7 1.57 7.84-.54a5.876 5.876 0 0 0 1.74-4.46l-1.75-.34zM2.96 5a4.346 4.346 0 0 1 5.41-.54L7.2 5.6l4.3.6-.6-4.2-1.31 1.26c-2.36-1.74-5.7-1.57-7.85.54C.5 5.03-.06 6.65.01 8.26l1.75.35A4.17 4.17 0 0 1 2.96 5z"/>'
+    item.tabButtonElement.onclick = (event) => {
+      event.stopPropagation()
+      this.onItemTabReset(item)
+    }
+    return item
+  }
+  newSelectionItem (sourceItem) {
+    const sourcePage = sourceItem.page
+    const sourceModel = sourcePage.primaryModel
+    const page = new DeckPage(this.element, this.causalDomain)
+    page.setStructureRoots(NodeSelectionStructureTraits.selectedRoots([sourceModel.rootNode]))
+    page.setStructureTraits(NodeSelectionStructureTraits)
+    page.setStructureCoalescing(true)
+    page.setCostTraits(sourceModel.costTraits)
+    page.setValueTraits(sourceModel.valueTraits)
+    page.setOrderFunction(sourceModel.orderFunction)
+    page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
+    const item = this.newItem(page)
+    item.tabTitleElement.innerText = 'Selection #' + (++this.itemNo)
+    item.tabButtonElement.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/>'
+    item.tabButtonElement.onclick = (event) => {
+      event.stopPropagation()
+      this.onItemTabClose(item)
+    }
+    return item
+  }
   setActiveItem (item) {
     const activeItem = this.activeItem
     if (activeItem !== item) {
@@ -93,29 +143,37 @@ export class Deck {
       this.activeItem = item
     }
   }
-  addPage (page, name) {
-    const input = this.state.input()
-    const tab = this.tabView.addTab(this.plusTab, false)
-    const item = new DeckItem(tab, page, input)
-    this.items.push(item)
-    tab.element.addEventListener('click', (event) => { this.onItemTabClick(item) })
-    tab.element.innerText = name
-    return item
-  }
   onPlusTabClick () {
-    const activeItem = this.activeItem
-    const activePage = activeItem.page
-    const activeModel = activePage.primaryModel
-    const page = new DeckPage(this.element, this.causalDomain)
-    page.setStructureRoots(NodeSelectionStructureTraits.selectedRoots([activeModel.rootNode]))
-    page.setStructureTraits(NodeSelectionStructureTraits)
-    page.setStructureCoalescing(true)
-    page.setCostTraits(activeModel.costTraits)
-    page.setValueTraits(activeModel.valueTraits)
-    page.setOrderFunction(activeModel.orderFunction)
-    page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
-    const item = this.addPage(page, 'Selection #' + (++this.itemNo))
+    const item = this.newSelectionItem(this.activeItem)
     this.setActiveItem(item)
+    this.causalDomain.update()
+  }
+  onItemTabReset (item) {
+    const page = item.page
+    const rootNode = page.primaryModel.rootNode
+    if (rootNode) {
+      page.primarySelection.setSubtree(rootNode)
+    }
+    this.setActiveItem(item)
+    this.causalDomain.update()
+  }
+  onItemTabClose (item) {
+    const items = this.items
+    const index = items.indexOf(item)
+    if (item === this.activeItem) {
+      const next = index + 1
+      if (next < items.length) {
+        this.setActiveItem(items[next])
+      } else if (0 < index) {
+        this.setActiveItem(items[index - 1])
+      } else {
+        this.setActiveItem(null)
+      }
+    }
+    this.state.remove(item.input)
+    this.element.removeChild(item.page.element)
+    this.tabView.removeTab(item.tab)
+    items.splice(index, 1)
     this.causalDomain.update()
   }
   onItemTabClick (item) {
