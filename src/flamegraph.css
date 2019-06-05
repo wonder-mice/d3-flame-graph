@@ -111,6 +111,64 @@
   padding: 2px 8px
 }
 
+/* Tabs */
+.fg-deck-tab {
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 16px;
+  line-height: 17px;
+}
+
+.fg-deck-tab-plus {
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  vertical-align: middle;
+  padding: 2px;
+  margin: 0 4px 0 4px;
+}
+
+.fg-deck-tab-title {
+  vertical-align: middle;
+  margin: 0 22px 0 4px;
+}
+
+.fg-deck-tab-close {
+  -moz-appearance: none;
+  -webkit-appearance: none;
+  appearance: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  border-radius: 2px;
+  padding: 2px 4px 2px 4px;
+  width: 12px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+.fg-deck-tab .fg-deck-tab-close {
+  visibility: hidden;
+}
+
+.fg-deck-tab:hover .fg-deck-tab-close {
+   visibility: visible;
+}
+
+.fg-deck-tab .fg-deck-tab-close:hover {
+  background-color: rgba(27,31,35,.08);
+}
+
+.fg-deck-tab .fg-deck-tab-close:active {
+  background-color: rgba(27,31,35,.16);
+}
+
 /* Other */
 .fg-nsel {
   opacity: 0.25;
