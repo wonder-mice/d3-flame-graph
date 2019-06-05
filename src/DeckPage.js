@@ -28,7 +28,7 @@ export class DeckPage {
 
     const primaryModel = this.primaryModel = new StructureModel()
     primaryModel.rootName = 'FIXME: Primary root name'
-    const primarySelection = new NodeSelection(primaryModel)
+    const primarySelection = this.primarySelection = new NodeSelection(primaryModel)
     const primaryViewOptions = new StructureViewOptions()
     primaryViewOptions.causalDomain = causalDomain
     primaryViewOptions.tooltipHostElement = element
