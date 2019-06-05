@@ -146,11 +146,12 @@
   -moz-user-select: none;
   -webkit-user-select: none;
   user-select: none;
+  vertical-align: middle;
+  box-sizing: content-box;
   border-radius: 2px;
   padding: 2px 4px 2px 4px;
   width: 12px;
   height: 16px;
-  vertical-align: middle;
 }
 
 .fg-deck-tab .fg-deck-tab-btn {
