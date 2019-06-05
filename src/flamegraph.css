@@ -139,7 +139,7 @@
   margin: 0 22px 0 4px;
 }
 
-.fg-deck-tab-close {
+.fg-deck-tab-btn {
   -moz-appearance: none;
   -webkit-appearance: none;
   appearance: none;
@@ -153,19 +153,19 @@
   vertical-align: middle;
 }
 
-.fg-deck-tab .fg-deck-tab-close {
+.fg-deck-tab .fg-deck-tab-btn {
   visibility: hidden;
 }
 
-.fg-deck-tab:hover .fg-deck-tab-close {
+.fg-deck-tab:hover .fg-deck-tab-btn {
    visibility: visible;
 }
 
-.fg-deck-tab .fg-deck-tab-close:hover {
+.fg-deck-tab .fg-deck-tab-btn:hover {
   background-color: rgba(27,31,35,.08);
 }
 
-.fg-deck-tab .fg-deck-tab-close:active {
+.fg-deck-tab .fg-deck-tab-btn:active {
   background-color: rgba(27,31,35,.16);
 }
 
