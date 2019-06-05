@@ -1,11 +1,11 @@
 /* Debug utilities (supposed to be used only during development) */
 .fg-debug-border-red {
-  outline: 1px solid red; 
+  outline: 1px solid red;
   outline-offset: -1px;
 }
 
 .fg-debug-border-blue {
-  outline: 1px solid blue; 
+  outline: 1px solid blue;
   outline-offset: -1px;
 }
 
