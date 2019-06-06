@@ -135,8 +135,12 @@
 }
 
 .fg-deck-tab-title {
+  display: inline-block;
   vertical-align: middle;
+  text-overflow: ellipsis;
+  overflow: hidden;
   margin: 0 22px 0 4px;
+  max-width: 250px;
 }
 
 .fg-deck-tab-btn {
@@ -250,8 +254,8 @@
 }
 
 .fg-node:hover, .fg-node-sm:hover {
-    border: 1px solid black;
-    /* cursor: pointer; */
+  border: 1px solid black;
+  /* cursor: pointer; */
 }
 
 .fg-node:hover {
