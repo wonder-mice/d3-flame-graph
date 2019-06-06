@@ -20,7 +20,6 @@ export class StructureModel {
     this.valueTraitsState = new State('StructureModel::ValueTraits')
     this.orderFunctionState = new State('StructureModel::OrderFunction')
 
-    this.rootNameState = new State('StructureModel::RootName')
     this.structureState = new State('StructureModel::Structure', (state) => { this.create() })
     this.structureState.input(this.structureRootsState)
     this.structureState.input(this.structureTraitsState)
@@ -35,11 +34,7 @@ export class StructureModel {
   }
   setRootName (name) {
     this.rootName = name
-    const rootNode = this.rootNode
-    if (rootNode) {
-      rootNode.name = name
-    }
-    this.rootNameState.invalidate()
+    this.structureState.invalidate()
   }
   setStructureRoots (roots) {
     this.structureRoots = roots

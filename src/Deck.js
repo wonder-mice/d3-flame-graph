@@ -9,6 +9,10 @@ class DeckItem {
     this.tab = tab
     this.page = page
     this.input = input
+    const state = this.state = new State('DeckItem::State')
+    state.input(this.page.state)
+    this.tabTitleState = new State('DeckItem::TabTitle')
+    state.input(this.tabTitleState)
     this.tabButtonElement = null
     this.tabTitleElement = null
   }
@@ -16,7 +20,7 @@ class DeckItem {
     this.page.element.style.display = active ? 'flex' : 'none'
     this.tab.setActive(active)
     if (active) {
-      this.input.attach(this.page.state)
+      this.input.attach(this.state)
     } else {
       this.input.detach()
     }
@@ -28,9 +32,9 @@ export class Deck {
     const state = this.state = new State('Deck::State')
     causalDomain = this.causalDomain = causalDomain || state
 
+    this.aggregationNo = 0
     this.nodeTooltipContentCallback = null
     this.items = []
-    this.itemNo = 0
     this.activeItem = null
 
     const element = this.element = document.createElement('div')
@@ -54,6 +58,9 @@ export class Deck {
     if (parent) {
       parent.appendChild(element)
     }
+  }
+  setRootName (name) {
+    this.masterItem.page.setRootName(name)
   }
   setStructureRoots (roots) {
     this.masterItem.page.setStructureRoots(roots)
@@ -103,11 +110,15 @@ export class Deck {
   newMasterItem () {
     const page = new DeckPage(this.element, this.causalDomain)
     const item = this.newItem(page)
-    item.tabTitleElement.innerText = 'Master'
     item.tabButtonElement.innerHTML = '<path fill-rule="evenodd" d="M10.24 7.4a4.15 4.15 0 0 1-1.2 3.6 4.346 4.346 0 0 1-5.41.54L4.8 10.4.5 9.8l.6 4.2 1.31-1.26c2.36 1.74 5.7 1.57 7.84-.54a5.876 5.876 0 0 0 1.74-4.46l-1.75-.34zM2.96 5a4.346 4.346 0 0 1 5.41-.54L7.2 5.6l4.3.6-.6-4.2-1.31 1.26c-2.36-1.74-5.7-1.57-7.85.54C.5 5.03-.06 6.65.01 8.26l1.75.35A4.17 4.17 0 0 1 2.96 5z"/>'
     item.tabButtonElement.onclick = (event) => {
       event.stopPropagation()
       this.onItemTabReset(item)
+    }
+    item.tabTitleState.input(item.page.primaryModel.structureState)
+    item.tabTitleState.action = (state) => {
+      const rootNode = item.page.primaryModel.rootNode
+      item.tabTitleElement.innerText = rootNode ? rootNode.name : 'Empty'
     }
     return item
   }
@@ -115,7 +126,10 @@ export class Deck {
     const sourcePage = sourceItem.page
     const sourceModel = sourcePage.primaryModel
     const page = new DeckPage(this.element, this.causalDomain)
-    page.setStructureRoots(NodeSelectionStructureTraits.selectedRoots([sourceModel.rootNode]))
+    const selectedRoots = NodeSelectionStructureTraits.selectedRoots([sourceModel.rootNode])
+    const rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, 'Empty', null)
+    page.setRootName(rootName || 'Everything')
+    page.setStructureRoots(selectedRoots)
     page.setStructureTraits(NodeSelectionStructureTraits)
     page.setStructureCoalescing(true)
     page.setCostTraits(sourceModel.costTraits)
@@ -123,7 +137,7 @@ export class Deck {
     page.setOrderFunction(sourceModel.orderFunction)
     page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
     const item = this.newItem(page)
-    item.tabTitleElement.innerText = 'Selection #' + (++this.itemNo)
+    item.tabTitleElement.innerText = rootName || 'Aggregation #' + (++this.aggregationNo)
     item.tabButtonElement.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/>'
     item.tabButtonElement.onclick = (event) => {
       event.stopPropagation()

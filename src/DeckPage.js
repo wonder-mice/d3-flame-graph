@@ -27,7 +27,6 @@ export class DeckPage {
     secondaryElement.style.overflow = 'auto'
 
     const primaryModel = this.primaryModel = new StructureModel()
-    primaryModel.rootName = 'FIXME: Primary root name'
     const primarySelection = this.primarySelection = new NodeSelection(primaryModel)
     const primaryViewOptions = new StructureViewOptions()
     primaryViewOptions.causalDomain = causalDomain
@@ -69,7 +68,12 @@ export class DeckPage {
     }
 
     this.selectedStructureState = new State('DeckPage::SelectedStructure', (state) => {
-      this.secondaryModel.structureRoots = NodeSelectionStructureTraits.selectedRoots([this.primaryModel.rootNode])
+      // FIXME: Can `primaryRootNode` be `null`?
+      const primaryRootNode = this.primaryModel.rootNode
+      const selectedRoots = NodeSelectionStructureTraits.selectedRoots([primaryRootNode])
+      const secondaryModel = this.secondaryModel
+      secondaryModel.rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, 'Empty', 'Selection')
+      secondaryModel.structureRoots = selectedRoots
     })
     this.selectedStructureState.input(primaryModel.selectionState)
     this.secondaryModel.structureRootsState.input(this.selectedStructureState)
@@ -84,6 +88,9 @@ export class DeckPage {
     if (parent) {
       parent.appendChild(element)
     }
+  }
+  setRootName (name) {
+    this.primaryModel.setRootName(name)
   }
   setStructureRoots (roots) {
     this.primaryModel.setStructureRoots(roots)
