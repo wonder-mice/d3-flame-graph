@@ -8,10 +8,14 @@ export const nodeHiddenDescendantMarked = 0b1000 // node has marked descendants 
 export const nodeFocused = 0b11 // node is focused
 export const nodeDescendantFocused = 0b10 // node is on the path from focused node to the root
 
+// Flag is set when node is selected.
 export const nodeFlagSelected = 0b000100
-export const nodeFlagDescendantSelected = 0b001000
-export const nodeFlagDescendantUnselected = 0b010000
-export const nodeFlagChildrenSelected = 0b100000
+// When set, all node's descendants have the same state of `nodeFlagSelected` flag.  E.g. if
+// node has both `nodeFlagSelected` and `nodeFlagSelectionTerminator` flags set, then the entire
+// subtree is selected. And if node only has `nodeFlagSelectionTerminator` flag set, then the
+// entire subtree is not selected. For leaf nodes `nodeFlagSelectionTerminator` should always
+// be set.
+export const nodeFlagSelectionTerminator = 0b001000
 
 export class Node {
   constructor (parent, name, cost) {
@@ -42,7 +46,22 @@ export class Node {
     //   parent.total == parent.self + sum([child.total for child in parent.children])
     //   node.total >= node.self
     // Layout is free to interpret such cases as it sees fit (pun intended).
-    this.selected = nodeFlagSelected | nodeFlagDescendantSelected
+    this.selected = nodeFlagSelected | nodeFlagSelectionTerminator
+  }
+}
+
+export function nodeTraverse (queue, callback) {
+  for (let k = queue.length; k--;) {
+    const nodes = queue[k]
+    for (let i = nodes.length; i--;) {
+      const node = nodes[i]
+      if (callback(node)) {
+        const children = node.children
+        if (children) {
+          queue[k++] = children
+        }
+      }
+    }
   }
 }
 
