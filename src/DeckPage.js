@@ -72,7 +72,7 @@ export class DeckPage {
       const primaryRootNode = this.primaryModel.rootNode
       const selectedRoots = NodeSelectionStructureTraits.selectedRoots([primaryRootNode])
       const secondaryModel = this.secondaryModel
-      secondaryModel.rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, 'Empty', 'Selection')
+      secondaryModel.rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, 'Empty', '(Selection)')
       secondaryModel.structureRoots = selectedRoots
     })
     this.selectedStructureState.input(primaryModel.selectionState)
