@@ -176,10 +176,13 @@ export class NodeTooltipView {
               <span class="fg-btn fg-btn-sm" id="${buttonIds.setSubtree}" title="${buttons.setSubtree.title}">${buttons.setSubtree.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setAncestors}" title="${buttons.setAncestors.title}">${buttons.setAncestors.content}</span>
-                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedSubtrees}" title="${buttons.setNamedSubtrees.title}">${buttons.setNamedSubtrees.content}</span>
-                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedAncestors}" title="${buttons.setNamedAncestors.title}">${buttons.setNamedAncestors.content}</span>
-
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNode}" title="${buttons.setNode.title}">${buttons.setNode.content}</span>
+              </div>
+            </div>
+            <div class="fg-dropdown">
+              <span class="fg-btn fg-btn-sm" id="${buttonIds.setNamedSubtrees}" title="${buttons.setNamedSubtrees.title}">${buttons.setNamedSubtrees.content}</span>
+              <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedAncestors}" title="${buttons.setNamedAncestors.title}">${buttons.setNamedAncestors.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedNodes}" title="${buttons.setNamedNodes.title}">${buttons.setNamedNodes.content}</span>
               </div>
             </div>
@@ -191,17 +194,17 @@ export class NodeTooltipView {
               </div>
             </div>
             <div class="fg-dropdown">
-              <span class="fg-btn fg-btn-sm" id="${buttonIds.excludeNode}" title="${buttons.excludeNode.title}">${buttons.excludeNode.content}</span>
-              <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
-                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeSubtree}" title="${buttons.excludeSubtree.title}">${buttons.excludeSubtree.content}</span>
-                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeAncestors}" title="${buttons.excludeAncestors.title}">${buttons.excludeAncestors.content}</span>
-              </div>
-            </div>
-            <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.includeNamed}" title="${buttons.includeNamed.title}">${buttons.includeNamed.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeNamedSubtrees}" title="${buttons.includeNamedSubtrees.title}">${buttons.includeNamedSubtrees.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeNamedAncestors}" title="${buttons.includeNamedAncestors.title}">${buttons.includeNamedAncestors.content}</span>
+              </div>
+            </div>
+            <div class="fg-dropdown">
+              <span class="fg-btn fg-btn-sm" id="${buttonIds.excludeNode}" title="${buttons.excludeNode.title}">${buttons.excludeNode.content}</span>
+              <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeSubtree}" title="${buttons.excludeSubtree.title}">${buttons.excludeSubtree.content}</span>
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeAncestors}" title="${buttons.excludeAncestors.title}">${buttons.excludeAncestors.content}</span>
               </div>
             </div>
             <div class="fg-dropdown">
