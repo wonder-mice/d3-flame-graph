@@ -47,6 +47,7 @@ export class Deck {
     const plusTabElement = plusTab.element
     plusTabElement.classList.add('fg-deck-tab')
     plusTabElement.addEventListener('click', (event) => { this.onPlusTabClick() })
+    plusTabElement.title = 'Extract selected subtree.'
     plusTabElement.innerHTML = (
 `<svg fill="currentColor" class="fg-deck-tab-plus" width="12" height="16" viewBox="0 0 12 16">
   <path fill-rule="evenodd" d="M12 9H7v5H5V9H0V7h5V2h2v5h5v2z"/>
