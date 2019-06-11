@@ -27,6 +27,11 @@ import { EnvironmentState } from './EnvironmentState'
 //   Exclude named decendants| Exclude all named ancestors | Exclude all named ancestors  (useless?)
 const buttons = {
   // Reset selection
+  setNode: {
+    title: 'Reset selection to include only this node.',
+    content: 'Σ¹',
+    callback: (selection, node) => { selection.setNode(node) }
+  },
   setSubtree: {
     title: 'Reset selection to include only this node and its descendants.',
     content: 'Σᛦ¹',
@@ -36,6 +41,11 @@ const buttons = {
     title: 'Reset selection to include only this node and its ancestors.',
     content: 'Σᛘ¹',
     callback: (selection, node) => { selection.setAncestors(node) }
+  },
+  setNamedNodes: {
+    title: 'Reset selection to include only nodes with the same name.',
+    content: 'Σⁿ',
+    callback: (selection, node) => { selection.setNamedNodes(node.name) }
   },
   setNamedSubtrees: {
     title: 'Reset selection to include only nodes with the same name and their descendants.',
@@ -51,65 +61,65 @@ const buttons = {
   includeNode: {
     title: 'Add node to selection.',
     content: '+Σ¹',
-    callback: (selection, node) => { selection.includeNode(node) }
+    callback: (selection, node) => { selection.modifyNode(node, true) }
   },
   includeSubtree: {
     title: 'Add node and its descendants to selection.',
     content: '+Σᛦ¹',
-    callback: (selection, node) => { selection.includeSubtree(node) }
+    callback: (selection, node) => { selection.modifySubtree(node, true) }
   },
   includeAncestors: {
     title: 'Add node and its ancestors to selection.',
     content: '+Σᛘ¹',
-    callback: (selection, node) => { selection.includeAncestors(node) }
+    callback: (selection, node) => { selection.modifyAncestors(node, true) }
   },
   // Remove from selection (node based)
   excludeNode: {
     title: 'Remove node from selection.',
     content: '-Σ¹',
-    callback: (selection, node) => { selection.excludeNode(node) }
+    callback: (selection, node) => { selection.modifyNode(node, false) }
   },
   excludeSubtree: {
     title: 'Remove node and its descendants from selection.',
     content: '-Σᛦ¹',
-    callback: (selection, node) => { selection.excludeSubtree(node) }
+    callback: (selection, node) => { selection.modifySubtree(node, false) }
   },
   excludeAncestors: {
     title: 'Remove node and its ancestors from selection.',
     content: '-Σᛘ¹',
-    callback: (selection, node) => { selection.excludeAncestors(node) }
+    callback: (selection, node) => { selection.modifyAncestors(node, false) }
   },
   // Add to selection (name based)
   includeNamed: {
     title: 'Add nodes with the same name to selection.',
     content: '+Σⁿ',
-    callback: (selection, node) => { selection.includeNamed(node.name) }
+    callback: (selection, node) => { selection.modifyNamedNodes(node.name, true) }
   },
   includeNamedSubtrees: {
     title: 'Add nodes with the same name and their descendants to selection.',
     content: '+Σᛦⁿ',
-    callback: (selection, node) => { selection.includeNamedSubtrees(node.name) }
+    callback: (selection, node) => { selection.modifyNamedSubtrees(node.name, true) }
   },
   includeNamedAncestors: {
     title: 'Add nodes with the same name and their ancestors to selection.',
     content: '+Σᛘⁿ',
-    callback: (selection, node) => { selection.includeNamedAncestors(node.name) }
+    callback: (selection, node) => { selection.modifyNamedAncestors(node.name, true) }
   },
   // Remove from selection (name based)
   excludeNamed: {
     title: 'Remove nodes with the same name from selection.',
     content: '-Σⁿ',
-    callback: (selection, node) => { selection.includeNamed(node.name) }
+    callback: (selection, node) => { selection.modifyNamedNodes(node.name, false) }
   },
   excludeNamedSubtrees: {
     title: 'Remove nodes with the same name and their descendants from selection.',
     content: '-Σᛦⁿ',
-    callback: (selection, node) => { selection.excludeNamedSubtrees(node.name) }
+    callback: (selection, node) => { selection.modifyNamedSubtrees(node.name, false) }
   },
   excludeNamedAncestors: {
     title: 'Remove nodes with the same name and their ancestors from selection.',
     content: '-Σᛘⁿ',
-    callback: (selection, node) => { selection.excludeNamedAncestors(node.name) }
+    callback: (selection, node) => { selection.modifyNamedAncestors(node.name, false) }
   }
 }
 
@@ -168,20 +178,23 @@ export class NodeTooltipView {
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setAncestors}" title="${buttons.setAncestors.title}">${buttons.setAncestors.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedSubtrees}" title="${buttons.setNamedSubtrees.title}">${buttons.setNamedSubtrees.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedAncestors}" title="${buttons.setNamedAncestors.title}">${buttons.setNamedAncestors.content}</span>
+
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNode}" title="${buttons.setNode.title}">${buttons.setNode.content}</span>
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedNodes}" title="${buttons.setNamedNodes.title}">${buttons.setNamedNodes.content}</span>
               </div>
             </div>
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.includeNode}" title="${buttons.includeNode.title}">${buttons.includeNode.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeSubtree}" title="${buttons.includeSubtree.title}">${buttons.includeSubtree.content}</span>
-                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeAncestors}" title="${buttons.includeAncestors.title}">${buttons.includeSubtree.content}</span>
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeAncestors}" title="${buttons.includeAncestors.title}">${buttons.includeAncestors.content}</span>
               </div>
             </div>
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.excludeNode}" title="${buttons.excludeNode.title}">${buttons.excludeNode.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeSubtree}" title="${buttons.excludeSubtree.title}">${buttons.excludeSubtree.content}</span>
-                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeAncestors}" title="${buttons.excludeAncestors.title}">${buttons.excludeSubtree.content}</span>
+                <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeAncestors}" title="${buttons.excludeAncestors.title}">${buttons.excludeAncestors.content}</span>
               </div>
             </div>
             <div class="fg-dropdown">
