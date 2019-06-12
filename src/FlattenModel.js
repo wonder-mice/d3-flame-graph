@@ -104,6 +104,12 @@ export class FlattenModel {
     // doesn't really means much and used mostly for visual purposes.
     let structurePath = this.structurePath
     let structureNode = this.structureNode
+    // How many items from structurePath we need to follow to get from `structureNode`
+    // to whatever we want `structureNode` to be. E.g. when we have non-null `structureNode`
+    // and it's in the same node tree, then `structureLevel` is 0, because `structureNode` is
+    // already what we want. However, when we only have `structurePath`, then `structureNode` is
+    // node tree root and we need to follow `structurePath.length` items to get `structureNode`
+    // match the `structurePath`.
     let structureLevel = 0
     if (structureNode) {
       structurePath = []
@@ -116,9 +122,9 @@ export class FlattenModel {
         structureNode = rootNode
         structureLevel = structurePath.length
       }
-    } else if (!structurePath) {
-      structurePath = []
+    } else {
       structureNode = this.rootNode
+      structureLevel = structurePath ? structurePath.length : 0
     }
     // Here we have valid `structurePath` and `structureNode` is a node from current structure,
     // while `structureLevel` is its index + 1 in `structurePath` (e.g. `structurePath.length`
