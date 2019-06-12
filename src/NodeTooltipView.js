@@ -1,30 +1,6 @@
 import { State } from './State'
 import { EnvironmentState } from './EnvironmentState'
 
-//   Selection button        | Normal                      | Flatten
-//  -------------------------+-----------------------------+-----------------------------
-//   Set node subtree        | Set node subtree            | Set node.roots subtrees
-//   Set node ancestors      | Set node ancestors          | Set node.roots ancestors
-//   Set named subtree       | Set all named subtrees      | Set all named subtrees
-//   Set named ancestors     | Set all named ancestors     | Set all named ancestors
-//   Set named               | Set all with name           | Set all with name            (useless?)
-//  -------------------------+-----------------------------+-----------------------------
-//   Include node            | Include node                | Include node.roots           (+ node.recursiveRoots?)
-//   Include node subtree    | Include node subtree        | Include node.roots subtrees
-//   Include node ancestors  | Include node ancestors      | Include node.roots ancestors (+ node.recursiveRoots?)
-//  -------------------------+-----------------------------+-----------------------------
-//   Exclude node            | Exclude node                | Exclude node.roots           (+ node.recursiveRoots?)
-//   Exclude node subtree    | Exclude node subtree        | Exclude node.roots subtrees
-//   Exclude node ancestors  | Exclude node ancestors      | Exclude node.roots ancestors (+ node.recursiveRoots?)
-//  -------------------------+-----------------------------+-----------------------------
-//   Include named           | Include all with name       | Include all with name
-//   Include named subtree   | Include all named subtrees  | Include all named subtrees
-//   Include named ancestors | Include all named ancestors | Include all named ancestors
-//  -------------------------+-----------------------------+-----------------------------
-//   Exclude named           | Exclude all with name       | Exclude all with name
-//   Exclude named subtree   | Exclude all named subtrees  | Exclude all named subtrees
-//   Exclude named ancestors | Exclude all named ancestors | Exclude all named ancestors  (useless?)
-//   Exclude named decendants| Exclude all named ancestors | Exclude all named ancestors  (useless?)
 const buttons = {
   // Reset selection
   setNode: {

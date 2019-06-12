@@ -8,6 +8,12 @@ function selectionRoots (root) {
   return root ? [root] : null
 }
 
+function selectionForEach (nodes, flag, callback) {
+  for (let i = nodes.length; i--;) {
+    callback(nodes[i], flag)
+  }
+}
+
 function selectionAllEqual (children, bits) {
   for (let i = children.length; i--;) {
     if (bits !== (children[i].selected & selectionMask)) {
@@ -109,6 +115,17 @@ function selectionUpdateAncestors (node, siblingsFlag, ancestorsFlag) {
     }
   }
   return changed
+}
+
+export function selectionReset (roots, flag) {
+  if (roots) {
+    const bits = flag | nodeFlagSelectionTerminator
+    nodeTraverse([roots], (node) => {
+      node.selected = (node.selected & ~selectionMask) | bits
+      return true
+    })
+  }
+  return true
 }
 
 export function selectionModifyNode (node, flag) {
@@ -223,6 +240,10 @@ export class NodeSelection {
     this.indexState = new State('NodeSelection::Index', (state) => { this.updateIndex(state) })
     this.indexState.input(this.selectionState)
   }
+  reset (include) {
+    selectionReset(selectionRoots(this.model.rootNode), include ? nodeFlagSelected : 0)
+    this.selectionState.invalidate()
+  }
   modifyNode (node, include) {
     selectionModifyNode(node, include ? nodeFlagSelected : 0)
     this.selectionState.invalidate()
@@ -275,23 +296,12 @@ export class NodeSelection {
     this.selectionState.invalidate()
   }
   updateIndex (state) {
-  }
-  /*
-  updateSelectionValue (state) {
     // [source]      [result]      [how]
     //  direct        direct        node.selectedCost = node.cost for each node
     //  direct        transitive    node.selectedCost = sum(child.cost) if child is selected
     //  transitive    direct        node.selectedCost = node.cost - sum(child.cost)
     //  transitive    transitive    node.selectedCost = node.cost - sum(child.cost)
-    const queue = this.rootNodes.slice()
-    for (let i = queue.length; i--;) {
-      const node = queue[i]
-      if (node.selected) {
-
-      }
-    }
   }
-  */
 }
 
 export class FlattenNodeSelection {
@@ -299,15 +309,53 @@ export class FlattenNodeSelection {
     this.selection = selection
     this.selectionState = selection.selectionState
   }
-  setSubtree (node) {
-    const nodes = node.roots
-    for (let i = nodes.length; i--;) {
-      // selectionRemoveAncestors(nodes[i])
-    }
-    for (let i = nodes.length; i--;) {
-      // selectionIncludeSubtree(nodes[i])
-    }
+  modifyNode (node, include) {
+    // FIXME: Likely need also modify recursive roots)
+    selectionForEach(node.roots, include ? nodeFlagSelected : 0, (node, flag) => { selectionModifyNode(node, flag) })
     this.selectionState.invalidate()
+  }
+  modifySubtree (node, include) {
+    // FIXME: Likely need also modify recursive roots)
+    selectionForEach(node.roots, include ? nodeFlagSelected : 0, (node, flag) => { selectionModifySubtree(node, flag) })
+    this.selectionState.invalidate()
+  }
+  modifyAncestors (node, include) {
+    // FIXME: Likely need also modify recursive roots)
+    selectionForEach(node.roots, include ? nodeFlagSelected : 0, (node, flag) => { selectionModifyAncestors(node, flag) })
+    this.selectionState.invalidate()
+  }
+  modifyNamedNodes (name, include) {
+    this.selection.modifyNamedNodes(name, include)
+  }
+  modifyNamedAncestors (name, include) {
+    this.selection.modifyNamedAncestors(name, include)
+  }
+  modifyNamedSubtrees (name, include) {
+    this.selection.modifyNamedSubtrees(name, include)
+  }
+  setNode (node) {
+    this.selection.reset(false)
+    selectionForEach(node.roots, nodeFlagSelected, (node, flag) => { selectionModifyNode(node, flag) })
+    this.selectionState.invalidate()
+  }
+  setSubtree (node) {
+    this.selection.reset(false)
+    selectionForEach(node.roots, nodeFlagSelected, (node, flag) => { selectionModifySubtree(node, flag) })
+    this.selectionState.invalidate()
+  }
+  setAncestors (node) {
+    this.selection.reset(false)
+    selectionForEach(node.roots, nodeFlagSelected, (node, flag) => { selectionModifyAncestors(node, flag) })
+    this.selectionState.invalidate()
+  }
+  setNamedNodes (name) {
+    this.selection.setNamedNodes(name)
+  }
+  setNamedSubtrees (name) {
+    this.selection.setNamedSubtrees(name)
+  }
+  setNamedAncestors (name) {
+    this.selection.setNamedAncestors(name)
   }
 }
 
