@@ -48,9 +48,11 @@ export class FlattenModel {
     this.structureStateBaseInput = this.structureState.input(this.structureBaseState)
 
     this.valueState = new State('FlattenModel::Value', (state) => { this.updateValue(state) })
+    this.valueState.input(this.valueTraitsState)
     this.valueStateStructureInput = this.valueState.input(this.structureState, StructureStateAddedSiblingsTraits)
 
     this.orderState = new State('FlattenModel::Order', (state) => { this.updateOrder(state) })
+    this.orderState.input(this.orderFunctionState)
     this.orderStateStructureInput = this.orderState.input(this.structureState, StructureStateAddedSiblingsTraits)
   }
   setRootName (name) {
