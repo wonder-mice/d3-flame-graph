@@ -1,6 +1,7 @@
 import {State} from './State'
 import {TabView} from './TabView'
 import {DeckPage} from './DeckPage'
+import {nodeRootPath, nodeWalk} from './Node'
 import {NodeSelectionStructureTraits} from './NodeSelection'
 import {EnvironmentState} from './EnvironmentState'
 
@@ -137,6 +138,19 @@ export class Deck {
     page.setValueTraits(sourceModel.valueTraits)
     page.setOrderFunction(sourceModel.orderFunction)
     page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
+
+    const sourcePrimaryFocusedNode = sourcePage.primaryView.focusedNode
+    if (sourcePrimaryFocusedNode) {
+      const path = []
+      nodeRootPath(sourcePrimaryFocusedNode, path)
+      if (path.length) {
+        // This is not the most conventional way to do it, but it was an interesting experiment to try.
+        page.primaryModel.structureState.update()
+        page.primaryView.setFocusedNode(nodeWalk(page.primaryModel.rootNode, path))
+      }
+    }
+    page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
+
     const item = this.newItem(page)
     item.tabTitleElement.innerText = rootName || 'Aggregation #' + (++this.aggregationNo)
     item.tabButtonElement.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/>'
