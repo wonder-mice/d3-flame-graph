@@ -65,11 +65,6 @@ export function nodeTraverse (queue, callback) {
   }
 }
 
-export function nodeRoot (node) {
-  for (let parent = node; parent; parent = (node = parent).parent) {}
-  return node
-}
-
 export function nodeNamed (nodes, name) {
   if (nodes) {
     for (let i = nodes.length; i--;) {
@@ -80,6 +75,47 @@ export function nodeNamed (nodes, name) {
     }
   }
   return null
+}
+
+export function nodeRoot (node) {
+  for (let parent = node; parent; parent = (node = parent).parent) {}
+  return node
+}
+
+export function nodeRootPath (node, path) {
+  // Root name is not part of the path because root is always there and its name
+  // doesn't really means much and used mostly for visual purposes.
+  for (let parent = node.parent; parent; parent = (node = parent).parent) {
+    if (path) {
+      path.push(node.name)
+    }
+  }
+  return node
+}
+
+export function nodeWalk (node, path, expand) {
+  for (let k = path ? path.length : 0; ;) {
+    if (expand) {
+      expand(node)
+    }
+    if (!k) {
+      break
+    }
+    const children = node.children
+    if (!children || !children.length) {
+      path.splice(0, k)
+      break
+    }
+    let pathNode = null
+    while (k && !(pathNode = nodeNamed(children, path[--k]))) {
+      path.splice(k, 1)
+    }
+    if (!pathNode) {
+      break
+    }
+    node = pathNode
+  }
+  return node
 }
 
 export class NodeContext {
