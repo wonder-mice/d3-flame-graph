@@ -120,7 +120,7 @@ export class Deck {
     item.tabTitleState.input(item.page.primaryModel.structureState)
     item.tabTitleState.action = (state) => {
       const rootNode = item.page.primaryModel.rootNode
-      item.tabTitleElement.innerText = rootNode ? rootNode.name : 'Empty'
+      item.tabTitleElement.innerText = rootNode ? rootNode.name : '(Empty)'
     }
     return item
   }
@@ -129,7 +129,7 @@ export class Deck {
     const sourceModel = sourcePage.primaryModel
     const page = new DeckPage(this.element, this.causalDomain)
     const selectedRoots = NodeSelectionStructureTraits.selectedRoots([sourceModel.rootNode])
-    const rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, 'Empty', null)
+    const rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, '(Empty)', null)
     page.setRootName(rootName || 'Everything')
     page.setStructureRoots(selectedRoots)
     page.setStructureTraits(NodeSelectionStructureTraits)
