@@ -1,7 +1,8 @@
 import {State} from './State'
 import {StructureModel} from './StructureModel'
 import {FlattenModel} from './FlattenModel'
-import {NodeSelection, FlattenNodeSelection, NodeSelectionStructureTraits} from './NodeSelection'
+import {NodeStructureTraits} from './Node'
+import {NodeSelection, FlattenNodeSelection} from './NodeSelection'
 import {nodeIndexNodes} from './NodeIndex'
 import {StructureViewOptions, StructureView} from './StructureView'
 import {FlattenViewOptions, FlattenView} from './FlattenView'
@@ -37,8 +38,7 @@ export class DeckPage {
     state.input(primaryView.state)
 
     const secondaryModel = this.secondaryModel = new FlattenModel()
-    secondaryModel.rootName = 'FIXME: Secondary root name'
-    secondaryModel.setStructureTraits(NodeSelectionStructureTraits)
+    secondaryModel.setStructureTraits(NodeStructureTraits)
     const secondaryViewOptions = new FlattenViewOptions()
     secondaryViewOptions.causalDomain = causalDomain
     secondaryViewOptions.tooltipHostElement = element
@@ -67,16 +67,28 @@ export class DeckPage {
       primaryView.hoverHighlightNodes = highlightNodes
     }
 
+    this.secondaryStructureState = new State('DeckPage::SecondaryStructure', (state) => {
+      const primaryRootNode = this.primaryModel.rootNode
+      const secondaryModel = this.secondaryModel
+      secondaryModel.rootName = primaryRootNode ? primaryRootNode.name : '(Empty)'
+      secondaryModel.structureRoots = primaryRootNode ? [primaryRootNode] : null
+    })
+    this.secondaryStructureState.input(primaryModel.structureState)
+    this.secondaryModel.structureRootsState.input(this.secondaryStructureState)
+
+    /*
     this.selectedStructureState = new State('DeckPage::SelectedStructure', (state) => {
       // FIXME: Can `primaryRootNode` be `null`?
+      // FIXME: Set secondaryModel.setStructureTraits(NodeSelectionStructureTraits)
       const primaryRootNode = this.primaryModel.rootNode
       const selectedRoots = NodeSelectionStructureTraits.selectedRoots([primaryRootNode])
       const secondaryModel = this.secondaryModel
-      secondaryModel.rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, 'Empty', '(Selection)')
+      secondaryModel.rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, '(Empty)', '(Selection)')
       secondaryModel.structureRoots = selectedRoots
     })
     this.selectedStructureState.input(primaryModel.selectionState)
     this.secondaryModel.structureRootsState.input(this.selectedStructureState)
+    */
 
     splitView.resized = () => {
       // FIXME: It could be benificial to have a `width` input for layout state,
