@@ -1,6 +1,6 @@
 import {State, StateInputTraits} from './State'
 import {Callstack} from './Callstack'
-import {Node, nodeNamed} from './Node'
+import {Node, nodeRootPath, nodeWalk} from './Node'
 
 export class StructureStateAddedSiblingsTraits extends StateInputTraits {
   static send (input, value) {
@@ -100,59 +100,27 @@ export class FlattenModel {
     this.structureAddedSiblingNodes.length = 0
   }
   updateStructureNode (state) {
-    // Root name is not part of the path because root is always there and its name
-    // doesn't really means much and used mostly for visual purposes.
     let structurePath = this.structurePath
     let structureNode = this.structureNode
-    // How many items from structurePath we need to follow to get from `structureNode`
-    // to whatever we want `structureNode` to be. E.g. when we have non-null `structureNode`
-    // and it's in the same node tree, then `structureLevel` is 0, because `structureNode` is
-    // already what we want. However, when we only have `structurePath`, then `structureNode` is
-    // node tree root and we need to follow `structurePath.length` items to get `structureNode`
-    // match the `structurePath`.
-    let structureLevel = 0
+    let walkingPath = null
+    const rootNode = this.rootNode
     if (structureNode) {
       structurePath = []
-      let structureNodeRoot = structureNode
-      for (let parent = structureNodeRoot.parent; parent; parent = (structureNodeRoot = parent).parent) {
-        structurePath.push(structureNodeRoot.name)
-      }
-      const rootNode = this.rootNode
-      if (rootNode !== structureNodeRoot) {
+      if (rootNode !== nodeRootPath(structureNode, structurePath)) {
         structureNode = rootNode
-        structureLevel = structurePath.length
+        walkingPath = structurePath
       }
     } else {
-      structureNode = this.rootNode
-      structureLevel = structurePath ? structurePath.length : 0
+      structureNode = rootNode
+      walkingPath = structurePath
     }
-    // Here we have valid `structurePath` and `structureNode` is a node from current structure,
-    // while `structureLevel` is its index + 1 in `structurePath` (e.g. `structurePath.length`
-    // if it's a root or `0` if it's a leaf node).
     const addedSiblingNodes = this.structureStateBaseInput.changed ? null : this.structureAddedSiblingNodes
-    for (;;) {
-      if (this.expand(structureNode) && addedSiblingNodes) {
+    this.structureNode = nodeWalk(structureNode, walkingPath, (node) => {
+      if (this.expand(node) && addedSiblingNodes) {
         // Contract is such, that when `expand()` returns `true`, node has at least one child.
-        addedSiblingNodes.push(structureNode.children)
+        addedSiblingNodes.push(node.children)
       }
-      if (!structureLevel) {
-        break
-      }
-      const children = structureNode.children
-      if (!children || !children.length) {
-        structurePath.splice(0, structureLevel)
-        break
-      }
-      let pathNode = null
-      while (structureLevel && !(pathNode = nodeNamed(children, structurePath[--structureLevel]))) {
-        structurePath.splice(structureLevel, 1)
-      }
-      if (!pathNode) {
-        break
-      }
-      structureNode = pathNode
-    }
-    this.structureNode = structureNode
+    })
     this.structurePath = structurePath
   }
   updateStructure (state) {
