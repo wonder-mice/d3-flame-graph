@@ -1,49 +1,3 @@
-function defaultGetName (item) {
-  return item.n
-}
-
-function defaultGetChildren (item) {
-  return item.c
-}
-
-function defaultGetCost (item) {
-  return item
-}
-
-function defaultPreorderDFS (queue, callback) {
-  let k = queue.length
-  const levels = Array(k).fill(0)
-  while (k--) {
-    const item = queue[k]
-    const level = levels[k]
-    const children = this.getChildren(item)
-    const childrenCount = children ? children.length : 0
-    callback(item, level, childrenCount)
-    if (childrenCount) {
-      const childrenLevel = level + 1
-      let i = childrenCount - 1
-      do {
-        queue[k] = children[i]
-        levels[k] = childrenLevel
-        ++k
-      } while (i--)
-    }
-  }
-}
-
-function defaultCollectSiblings (parents) {
-  const result = []
-  for (let n = parents.length; n--;) {
-    const children = this.getChildren(parents[n])
-    if (children) {
-      for (let i = children.length; i--;) {
-        result.push(children[i])
-      }
-    }
-  }
-  return result
-}
-
 function defaultNewCost () {
   const cost = {}
   return cost
@@ -94,30 +48,59 @@ function defaultGetDelta (cost) {
 // `preorderDFS()` and `collectSiblings()`. Item cost is... (FINISH ME)
 export class StructureTraits {
   constructor () {
-    // Given `item`, returns its name as a string.
-    this.getName = defaultGetName
-    // Given `item`, returns its cost. Cost is any entity that `CostTraits` can work with. It can be
-    // `null` or `undefined` as well, it's up to `CostTraits` to handle such cases correctly.
-    this.getCost = defaultGetCost
-    // Given `item`, returns list of its direct children as an array. It would be nice not to rely
-    // on it, and to have it only for the sake of convenient default implementations of
-    // 'preorderDFS' and 'collectSiblings'. In other words, no code (except default implementations
-    // of traits methods) should use it. But whether it's realistic is to be seen.
-    this.getChildren = defaultGetChildren
-    // Given initial list of items as an array, call callback for each item and their descendants in
-    // DFS pre-order (aka NLR - node, left, rigth). Initial list of items can be used as DFS queue -
-    // callers must expect that it will be mutated.
-    this.preorderDFS = defaultPreorderDFS
-    // Given list of items as an array, returns array that contains all their direct children.
-    this.collectSiblings = defaultCollectSiblings
+    const constructor = this.constructor
+    this.getName = constructor.getName
+    this.getCost = constructor.getCost
+    this.getChildren = constructor.getChildren
+    this.preorderDFS = constructor.preorderDFS
+    this.collectSiblings = constructor.collectSiblings
   }
-  // These are just so `StructureTraits` class can be used as a traits object directly without
-  // need to create an instance of it.
-  static getName (item) { return defaultGetName(item) }
-  static getCost (item) { return defaultGetCost(item) }
-  static getChildren (item) { return defaultGetChildren(item) }
-  static preorderDFS (queue, callback) { return defaultPreorderDFS(queue, callback) }
-  static collectSiblings (parents) { return defaultCollectSiblings(parents) }
+  // Given `item`, returns its name as a string.
+  static getName (item) { return item.n }
+  // Given `item`, returns its cost. Cost is any entity that `CostTraits` can work with. It can be
+  // `null` or `undefined` as well, it's up to `CostTraits` to handle such cases correctly.
+  static getCost (item) { return item }
+  // Given `item`, returns list of its direct children as an array. It would be nice not to rely
+  // on it, and to have it only for the sake of convenient default implementations of
+  // 'preorderDFS' and 'collectSiblings'. In other words, no code (except default implementations
+  // of traits methods) should use it. But whether it's realistic is to be seen.
+  static getChildren (item) { return item.c }
+  // Given initial list of items as an array, call callback for each item and their descendants in
+  // DFS pre-order (aka NLR - node, left, rigth). Initial list of items can be used as DFS queue -
+  // callers must expect that it will be mutated.
+  static preorderDFS (queue, callback) {
+    let k = queue.length
+    const levels = Array(k).fill(0)
+    while (k--) {
+      const item = queue[k]
+      const level = levels[k]
+      const children = this.getChildren(item)
+      const childrenCount = children ? children.length : 0
+      callback(item, level, childrenCount)
+      if (childrenCount) {
+        const childrenLevel = level + 1
+        let i = childrenCount - 1
+        do {
+          queue[k] = children[i]
+          levels[k] = childrenLevel
+          ++k
+        } while (i--)
+      }
+    }
+  }
+  // Given list of items as an array, returns array that contains all their direct children.
+  static collectSiblings (parents) {
+    const result = []
+    for (let n = parents.length; n--;) {
+      const children = this.getChildren(parents[n])
+      if (children) {
+        for (let i = children.length; i--;) {
+          result.push(children[i])
+        }
+      }
+    }
+    return result
+  }
 }
 
 export class CostTraits {
