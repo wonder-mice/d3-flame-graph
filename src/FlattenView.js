@@ -93,7 +93,7 @@ export class FlattenView extends NodeView {
     const layout = this.layout
     layout.totalWidth = this.layoutWidth
     layout.hasDelta = model.valueTraits.delta
-    this.layoutResult = layout.layout([model.rootNode], model.structureNode, ++this.revision)
+    this.layoutResult = layout.layout(model.rootNode, model.structureNode, ++this.revision)
   }
   updateRenderBase (state) {
     this.element.style.height = this.layoutResult.height + 'px'

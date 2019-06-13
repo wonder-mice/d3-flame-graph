@@ -123,7 +123,7 @@ export class StructureView extends NodeView {
     const layout = this.layout
     layout.totalWidth = this.layoutWidth
     layout.hasDelta = model.valueTraits.delta
-    this.layoutResult = layout.layout([model.rootNode], this.focusedNode, ++this.revision)
+    this.layoutResult = layout.layout(model.rootNode, this.focusedNode, ++this.revision)
   }
   updateRenderBase (state) {
     this.element.style.height = this.layoutResult.height + 'px'
