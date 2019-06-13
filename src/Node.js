@@ -1,3 +1,5 @@
+import {StructureTraits} from './Item'
+
 // `Node.mark` flags:
 export const nodeMarked = 0b0001 // node is marked
 export const nodeDescendantMarked = 0b0010 // node has a descendant that is marked
@@ -116,6 +118,12 @@ export function nodeWalk (node, path, expand) {
     node = pathNode
   }
   return node
+}
+
+export class NodeStructureTraits extends StructureTraits {
+  static getName (node) { return node.name }
+  static getCost (node) { return node.cost }
+  static getChildren (node) { return node.children }
 }
 
 export class NodeContext {
