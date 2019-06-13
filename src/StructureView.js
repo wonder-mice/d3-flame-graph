@@ -84,6 +84,10 @@ export class StructureView extends NodeView {
     this.revision = 0
     this.rootIndex = null
   }
+  setFocusedNode (node) {
+    this.focusedNode = node
+    this.focusedNodeState.invalidate()
+  }
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
       const node = element.__node__
