@@ -7,8 +7,21 @@ export class NodeView {
     this.causalDomain = causalDomain || this.state
 
     const element = this.element = document.createElement('div')
-    element.style.position = 'relative'
-    element.style.overflow = 'hidden'
+    element.className = 'fg-nodeview'
+    element.style.display = 'flex'
+    element.style.flexDirection = 'column'
+    element.style.width = '100%'
+
+    const toolbarElement = this.toolbarElement = element.appendChild(document.createElement('div'))
+    toolbarElement.className = 'fg-toolbar'
+    toolbarElement.style.display = 'flex'
+    toolbarElement.style.flexDirection = 'row'
+    toolbarElement.style.flexShrink = '0'
+
+    const nodesElement = this.nodesElement = element.appendChild(document.createElement('div'))
+    nodesElement.className = 'fg-nodeview-nodes'
+    nodesElement.style.position = 'relative'
+    nodesElement.style.overflow = 'hidden'
 
     this.layoutWidth = 0
     this.layoutWidthState = new State('StructureView::LayoutWidth', (state) => { this.updateLayoutWidth(state) })
@@ -21,16 +34,16 @@ export class NodeView {
     }
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver((entries) => { layoutWidthChanged(entries[0].contentRect.width) })
-      this.resizeObserver.observe(this.element)
+      this.resizeObserver.observe(this.nodesElement)
     } else {
-      window.addEventListener('resize', () => { layoutWidthChanged(this.element.getBoundingClientRect().width) })
+      window.addEventListener('resize', () => { layoutWidthChanged(this.nodesElement.getBoundingClientRect().width) })
     }
   }
   setResized () {
     this.layoutWidthState.invalidate()
   }
   updateLayoutWidth (state) {
-    const width = this.element.getBoundingClientRect().width
+    const width = this.nodesElement.getBoundingClientRect().width
     if (this.layoutWidth !== width) {
       this.layoutWidth = width
     } else {
