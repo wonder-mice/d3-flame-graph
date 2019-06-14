@@ -44,6 +44,12 @@
   bottom: 100%;
 }
 
+/* Toolbar */
+.fg-toolbar {
+  padding: 4px;
+  box-sizing: border-box;
+}
+
 /* Buttons */
 .fg-btn {
   -moz-appearance: none;
@@ -109,6 +115,21 @@
   font-size: 11px;
   line-height: 14px;
   padding: 2px 8px
+}
+
+.fg-input {
+  color: #24292e;
+  border: 1px solid #d1d5da;
+  border-radius: 3px;
+  padding: 2px 6px;
+  box-shadow: inset 0 1px 2px rgba(27,31,35,.075);
+  vertical-align: middle;
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.fg-input-mono {
+  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
 }
 
 /* Tabs */
@@ -224,7 +245,8 @@
 .fg-split-handle {
   flex-basis: 4px;
   border: 1px solid #e1e4e8;
-  border-radius: 3px;
+  border-top: 0px;
+  border-bottom: 0px;
 }
 
 .fg-node, .fg-node-sm {
