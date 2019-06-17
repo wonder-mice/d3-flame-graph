@@ -56,7 +56,6 @@ export class SplitView {
     const right = this.right = document.createElement('div')
     const handle = this.handle = document.createElement('div')
     element.style.display = 'flex'
-    element.style.width = '100%'
     left.style.display = 'flex'
     left.style.overflow = 'hidden'
     left.style.width = '75%'

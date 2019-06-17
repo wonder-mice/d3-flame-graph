@@ -14,12 +14,11 @@ export class DeckPage {
     causalDomain = this.causalDomain = causalDomain || state
 
     const element = this.element = document.createElement('div')
-    element.style.width = '100%'
     element.style.display = 'flex'
-    element.style.position = 'relative'
     element.style.flexDirection = 'column'
 
     const splitView = this.splitView = new SplitView(element)
+    splitView.element.style.flex = '1 0'
     const primaryElement = this.primaryElement = splitView.left.appendChild(document.createElement('div'))
     primaryElement.style.width = '100%'
     primaryElement.style.overflow = 'auto'
