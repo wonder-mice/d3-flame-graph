@@ -31,7 +31,6 @@ export class DeckPage {
     const primarySelection = this.primarySelection = new NodeSelection(primaryModel)
     const primaryViewOptions = new StructureViewOptions()
     primaryViewOptions.causalDomain = causalDomain
-    primaryViewOptions.tooltipHostElement = element
     const primaryView = this.primaryView = new StructureView(primaryModel, primaryViewOptions)
     primaryView.tooltipContentView.setSelectionInterface(primarySelection)
     primaryElement.appendChild(primaryView.element)
@@ -41,7 +40,6 @@ export class DeckPage {
     secondaryModel.setStructureTraits(NodeStructureTraits)
     const secondaryViewOptions = new FlattenViewOptions()
     secondaryViewOptions.causalDomain = causalDomain
-    secondaryViewOptions.tooltipHostElement = element
     const secondaryView = this.secondaryView = new FlattenView(secondaryModel, secondaryViewOptions)
     secondaryView.tooltipContentView.setSelectionInterface(new FlattenNodeSelection(primarySelection))
     secondaryElement.appendChild(secondaryView.element)

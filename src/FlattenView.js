@@ -9,7 +9,6 @@ import {EnvironmentState} from './EnvironmentState'
 export class FlattenViewOptions {
   constructor () {
     this.causalDomain = null
-    this.tooltipHostElement = null
   }
 }
 
@@ -17,7 +16,6 @@ export class FlattenView extends NodeView {
   constructor (model, options) {
     super(options && options.causalDomain)
     const causalDomain = this.causalDomain
-    const element = this.element
     this.model = model
 
     this.hoveredElement = null
@@ -37,7 +35,7 @@ export class FlattenView extends NodeView {
     this.hoveredNodeStateLayoutInput = this.hoveredNodeState.input(this.layoutState)
     this.hoveredNodeState.input(this.hoveredElementState)
 
-    const renderer = this.renderer = new NodeRenderer(element)
+    const renderer = this.renderer = new NodeRenderer(this.nodesElement)
     const view = this // Because `this` in listener function will be set to HTML element object
     renderer.nodeClickListener = function (event) { view.onNodeClick(this, event) }
     renderer.nodeMouseEnterListener = function (event) { view.onNodeMouseEnter(this, event) }
@@ -50,7 +48,7 @@ export class FlattenView extends NodeView {
 
     this.tooltipNodeState = new State('FlattenView::TooltipNode', (state) => { this.updateTooltipNode(state) })
     this.tooltipNodeState.input(this.hoveredNodeState)
-    const tooltipView = this.tooltipView = new TooltipView(options.tooltipHostElement || element)
+    const tooltipView = this.tooltipView = new TooltipView(document.body)
     const tooltipContentView = this.tooltipContentView = new NodeTooltipView(tooltipView.element, causalDomain)
     tooltipContentView.contentState.input(this.tooltipNodeState)
     this.tooltipPositionState = new State('FlattenView::TooltipPosition', (state) => { this.updateTooltipPosition(state) })
@@ -96,7 +94,8 @@ export class FlattenView extends NodeView {
     this.layoutResult = layout.layout(model.rootNode, model.structureNode, ++this.revision)
   }
   updateRenderBase (state) {
-    this.element.style.height = this.layoutResult.height + 'px'
+    // FIXME: Renderer should own its element and providing target size should be part of renderer interface.
+    this.nodesElement.style.height = this.layoutResult.height + 'px'
     this.renderer.render(this.layoutResult)
   }
   updateRender (state) {
