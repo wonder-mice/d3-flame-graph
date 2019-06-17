@@ -3,7 +3,7 @@ import {TabView} from './TabView'
 import {DeckPage} from './DeckPage'
 import {nodeRootPath, nodeWalk} from './Node'
 import {NodeSelectionStructureTraits} from './NodeSelection'
-import {EnvironmentState} from './EnvironmentState'
+import {generateElementId, elementWithId} from './EnvironmentState'
 
 class DeckItem {
   constructor (tab, page, input) {
@@ -105,13 +105,13 @@ export class Deck {
     const tabElement = tab.element
     const item = new DeckItem(tab, page, input)
     this.items.push(item)
-    const buttonId = EnvironmentState.newId('deck-tab-btn')
-    const titleId = EnvironmentState.newId('deck-tab-title')
+    const buttonId = generateElementId('deck-tab-btn')
+    const titleId = generateElementId('deck-tab-title')
     tabElement.addEventListener('click', (event) => { this.onItemTabClick(item) })
     tabElement.classList.add('fg-deck-tab')
     tabElement.innerHTML = `<svg id="${buttonId}" class="fg-deck-tab-btn" viewBox="0 0 12 16"></svg><span id="${titleId}" class="fg-deck-tab-title"></span>`
-    item.tabButtonElement = tabElement.querySelector('#' + buttonId)
-    item.tabTitleElement = tabElement.querySelector('#' + titleId)
+    item.tabButtonElement = elementWithId(tabElement, buttonId)
+    item.tabTitleElement = elementWithId(tabElement, titleId)
     return item
   }
   newMasterItem () {

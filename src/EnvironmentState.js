@@ -3,8 +3,12 @@ export class EnvironmentState {
 
 let lastId = 0
 
-function newId (tag) {
+export function generateElementId (tag) {
   return 'fg-' + (tag || 'id') + '-' + (++lastId)
+}
+
+export function elementWithId (container, id) {
+  return container.querySelector('#' + id)
 }
 
 function textSelected () {
@@ -25,6 +29,5 @@ if (typeof document !== 'undefined') {
   document.addEventListener('keyup', onKeyUpDown, false)
 }
 
-EnvironmentState.newId = newId
 EnvironmentState.shiftKey = false
 EnvironmentState.textSelected = textSelected

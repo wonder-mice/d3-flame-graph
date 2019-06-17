@@ -1,5 +1,5 @@
-import { State } from './State'
-import { EnvironmentState } from './EnvironmentState'
+import {State} from './State'
+import {generateElementId, elementWithId} from './EnvironmentState'
 
 const buttons = {
   // Reset selection
@@ -119,12 +119,12 @@ export class NodeTooltipView {
     this.elementState.invalidate()
   }
   updateElement (state) {
-    const headerId = EnvironmentState.newId('tooltip-header')
-    const bodyId = EnvironmentState.newId('tooltip-body')
+    const headerId = generateElementId('tooltip-header')
+    const bodyId = generateElementId('tooltip-body')
 
     const buttonIds = {}
     for (const name in buttons) {
-      buttonIds[name] = EnvironmentState.newId('tooltip-button')
+      buttonIds[name] = generateElementId('tooltip-button')
     }
     const contentHTML = (
       `<div class='fg-tooltip'>
@@ -199,12 +199,12 @@ export class NodeTooltipView {
       </div`)
     const container = this.container
     container.innerHTML = contentHTML
-    this.header = container.querySelector('#' + headerId)
-    this.body = container.querySelector('#' + bodyId)
+    this.header = elementWithId(container, headerId)
+    this.body = elementWithId(container, bodyId)
 
     const causalDomain = this.causalDomain
     for (const name in buttons) {
-      container.querySelector('#' + buttonIds[name]).addEventListener('click', (event) => {
+      elementWithId(container, buttonIds[name]).addEventListener('click', (event) => {
         buttons[name].callback(this.selectionInterface, this.node)
         causalDomain.update()
       })
