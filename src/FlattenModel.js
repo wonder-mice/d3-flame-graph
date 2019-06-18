@@ -151,7 +151,6 @@ export class FlattenModel {
     const rootNode = new Node(null, this.rootName || 'All', rootCost)
     rootNode.roots = structureRoots
     rootNode.self = 0
-    rootNode.dir = true
     if (aggregates) {
       for (let i = structureRoots.length; i--;) {
         const root = structureRoots[i]
@@ -194,7 +193,6 @@ export class FlattenModel {
           node = new Node(parentNode, name, aggregates ? costTraits.copyCost(cost) : null)
           node.roots = [item]
           node.self = 0
-          node.dir = true
           nodes.set(name, node)
         }
       }

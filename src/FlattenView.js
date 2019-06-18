@@ -23,6 +23,7 @@ export class FlattenView extends NodeView {
     this.hoveredElementState = new State('FlattenView::HoveredElement')
 
     this.layout = new NodeLayout()
+    this.layout.hierarchy = false
     this.layoutState = new State('FlattenView::Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(model.orderState)
     this.layoutState.input(model.valueState)

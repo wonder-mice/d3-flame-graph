@@ -16,10 +16,11 @@ export class NodeLayout {
     this.totalWidth = 0
     this.nodeWidthMin = 3
     this.rowHeight = 18
+    this.hierarchy = true
     this.hasDelta = false
   }
   layout (rootNode, focusNode, revision) {
-    let node, i, children, childrenY, n, directory
+    let node, i, children, childrenY, n
     let subtotal, abstotal, ratio, child, childX, childWidth, delta
     let totalHeight = 0
     const nodes = []
@@ -27,6 +28,7 @@ export class NodeLayout {
     const nodeWidthMin = this.nodeWidthMin
     const rowHeight = this.rowHeight
     const hasDelta = this.hasDelta
+    const hierarchy = this.hierarchy
     const queue = []
     let maxDelta = 0
     const stemNodes = []
@@ -54,8 +56,7 @@ export class NodeLayout {
         continue
       }
       childrenY = node.y + rowHeight
-      directory = node.dir
-      if (directory) {
+      if (!hierarchy) {
         for (subtotal = 0, i = n; i--;) {
           subtotal = subtotal < (abstotal = Math.abs(children[i].total)) ? abstotal : subtotal
         }
@@ -77,7 +78,7 @@ export class NodeLayout {
         child.width = childWidth
         child.x = childX
         child.y = childrenY
-        if (directory) {
+        if (!hierarchy) {
           childrenY += rowHeight
         } else {
           childX += childWidth

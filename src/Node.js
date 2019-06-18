@@ -33,7 +33,6 @@ export class Node {
     this.rev = 0
     // Optional fields:
     // .roots - array of items used to generate this node
-    // .dir - boolean, true if item is a directory
     // Value fields:
     // .total - signed scalar, total cost of the node and it's descendants (can be negative!)
     // .self - signed scalar, intrinsic cost of the node itself (can be negative!)
