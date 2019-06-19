@@ -10,7 +10,6 @@ export class NodeView {
     element.className = 'fg-nodeview'
     element.style.display = 'flex'
     element.style.flexDirection = 'column'
-    element.style.width = '100%'
 
     const toolbarElement = this.toolbarElement = element.appendChild(document.createElement('div'))
     toolbarElement.className = 'fg-toolbar'

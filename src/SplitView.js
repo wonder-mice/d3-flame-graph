@@ -56,12 +56,13 @@ export class SplitView {
     const right = this.right = document.createElement('div')
     const handle = this.handle = document.createElement('div')
     element.style.display = 'flex'
-    left.style.display = 'flex'
+    element.className = 'fg-split'
     left.style.overflow = 'hidden'
     left.style.width = '75%'
-    right.style.display = 'flex'
+    left.className = 'fg-split-left'
     right.style.overflow = 'hidden'
     right.style.flex = '1 1 0'
+    right.className = 'fg-split-right'
     handle.style.flexGrow = '0'
     handle.style.flexShrink = '0'
     handle.style.cursor = this.cursor

@@ -16,14 +16,17 @@ export class DeckPage {
     const element = this.element = document.createElement('div')
     element.style.display = 'flex'
     element.style.flexDirection = 'column'
+    element.className = 'fg-deck-page'
 
     const splitView = this.splitView = new SplitView(element)
     splitView.element.style.flex = '1 0'
     const primaryElement = this.primaryElement = splitView.left.appendChild(document.createElement('div'))
     primaryElement.style.width = '100%'
+    primaryElement.style.height = '100%'
     primaryElement.style.overflow = 'auto'
     const secondaryElement = this.secondaryElement = splitView.right.appendChild(document.createElement('div'))
     secondaryElement.style.width = '100%'
+    secondaryElement.style.height = '100%'
     secondaryElement.style.overflow = 'auto'
 
     const primaryModel = this.primaryModel = new StructureModel()
