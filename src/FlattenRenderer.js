@@ -14,19 +14,14 @@ function clip (value, min, max) {
   return value
 }
 
-function nodeContent (node, element, renderer) {
-  element.innerText = node.name
-  const prcnt = (Math.abs(node.total) / renderer.nodesMaxValue * 100) + '%'
-  const color = deltaColor(node.delta, renderer.maxDelta)
-  element.style.background = `linear-gradient(to right, ${color} ${prcnt}, #fff ${prcnt})`
-}
-
 // FIXME: Things to address:
-//   [ ] How to send information / updates from `model` to `renderer`.
-//   [ ] How to know that nodes have delta?
-//   [ ] How to compute min/max total/self/delta
+//   [ ] What color to use when delta is not valid?
 //   [ ] How element content is set
+//   [ ] How to know that nodes have delta?
+//   [ ] How to send information / updates from `model` to `renderer`.
+//   [ ] How to compute min/max total/self/delta
 //   [ ] Chrome / Safari 100% height issues (check FireFox as well)
+//   [ ] updatePage() logic is too complicated and hard to follow, not optimal as well
 export class FlattenRenderer {
   constructor (model, causalDomain) {
     this.model = model
@@ -194,25 +189,14 @@ export class FlattenRenderer {
     }
   }
   updateCommonStyle (state) {
-    const nodeWidthSpec = this.nodeWidthSpec
-    const nodeHeightSpec = this.nodeHeightSpec = this.nodeHeightPixels + 'px'
-    const unusedElements = this.unusedElements
-    for (let i = unusedElements.length; i--;) {
-      const element = unusedElements[i]
-      element.style.width = nodeWidthSpec
-      element.style.height = nodeHeightSpec
-    }
-    const pageNodes = this.pageNodes
-    for (let i = pageNodes.length; i--;) {
-      const element = pageNodes[i].element
-      element.style.width = nodeWidthSpec
-      element.style.height = nodeHeightSpec
-    }
+    this.nodeHeightSpec = this.nodeHeightPixels + 'px'
   }
   updatePage (state) {
     const nodeHeightPixels = this.nodeHeightPixels
     const filteredNodes = this.filteredNodes
     const filteredNodesCount = filteredNodes ? filteredNodes.length : 0
+
+    const commonStyleChanged = this.commonStyleState.changed
     const filteredNodesChanged = this.pageStateFilteredNodesInput.changed
     const nodeHeightChanged = this.pageStateNodeHeightInput.changed
     const focusedNodeChanged = this.pageStateFocusedNodeInput.changed
@@ -247,6 +231,17 @@ export class FlattenRenderer {
       }
       pageNodes.length = 0
     }
+    // Update properties common for all elements.
+    if (commonStyleChanged) {
+      const unusedElements = this.unusedElements
+      for (let i = unusedElements.length; i--;) {
+        this.applyCommonStyle(unusedElements[i])
+      }
+      const pageNodes = this.pageNodes
+      for (let i = pageNodes.length; i--;) {
+        this.applyCommonStyle(pageNodes[i].element)
+      }
+    }
     // Compute updated page geometry.
     let pageBegin = viewportBegin - Math.round(pageLengthCoefficient * viewportLength)
     if (pageBegin < 0) {
@@ -262,7 +257,6 @@ export class FlattenRenderer {
     const pageReversed = this.reversed
     const pageDirection = pageReversed ? -1 : 1
     const pageBase = pageReversed ? pageEnd - 1 : pageBegin
-    const nodeContent = this.nodeContent
     for (let i = pageBegin, k = pageBase; i < pageEnd; ++i, k += pageDirection) {
       const node = this.filteredNodes[k]
       node.rev = pageRevision
@@ -270,11 +264,11 @@ export class FlattenRenderer {
       if (element) {
         if (nodeContentChanged || pageContentChanged) {
           element.style.top = (i * nodeHeightPixels) + 'px'
-          nodeContent(node, element, this)
+          this.applyContent(element, node)
         }
       } else {
         element = this.createElement(node)
-        nodeContent(node, element, this)
+        this.applyContent(element, node)
         element.style.top = (i * nodeHeightPixels) + 'px'
         element.style.display = 'block'
       }
@@ -299,15 +293,13 @@ export class FlattenRenderer {
     let element = unusedElements.pop()
     if (!element) {
       element = document.createElement('div')
+      element.className = 'fg-node'
+      element.style.display = 'none'
       element.addEventListener('click', this.nodeClickListener)
       element.addEventListener('mouseenter', this.nodeMouseEnterListener)
       element.addEventListener('mouseleave', this.nodeMouseLeaveListener)
       element.addEventListener('mousemove', this.nodeMouseMoveListener)
-      element.className = 'fg-node'
-      const style = element.style
-      style.display = 'none'
-      style.width = this.nodeWidthSpec
-      style.height = this.nodeHeightSpec
+      this.applyCommonStyle(element)
       this.nodesElement.appendChild(element)
     }
     node.element = element
@@ -322,5 +314,16 @@ export class FlattenRenderer {
       element.__node__ = null
       this.unusedElements.push(element)
     }
+  }
+  applyCommonStyle (element) {
+    const style = element.style
+    style.width = this.nodeWidthSpec
+    style.height = this.nodeHeightSpec
+  }
+  applyContent (element, node) {
+    element.innerText = node.name
+    const prcnt = (Math.abs(node.total) / this.nodesMaxValue * 100) + '%'
+    const color = deltaColor(node.delta, this.maxDelta)
+    element.style.background = `linear-gradient(to right, ${color} ${prcnt}, #fff ${prcnt})`
   }
 }
