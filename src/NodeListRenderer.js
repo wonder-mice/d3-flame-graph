@@ -22,76 +22,66 @@ function clip (value, min, max) {
 //   [ ] How to compute min/max total/self/delta
 //   [ ] Chrome / Safari 100% height issues (check FireFox as well)
 //   [ ] updatePage() logic is too complicated and hard to follow, not optimal as well
-export class FlattenRenderer {
-  constructor (model, causalDomain) {
-    this.model = model
-
-    this.focusedNode = null
+export class NodeListRenderer {
+  constructor (causalDomain) {
+    this.nodes = null
     this.filterPredicate = null
     this.reversed = false
-    this.nodeWidthSpec = '100%'
-    this.nodeHeightPixels = 18
-    this.nodeContent = nodeContent
+    this.nodeWidthPixels = null
+    this.nodeHeightPixels = null
 
+    this.nodeClass = 'fg-node'
     this.nodeClickListener = null
     this.nodeMouseEnterListener = null
     this.nodeMouseLeaveListener = null
     this.nodeMouseMoveListener = null
 
-    this.focusedNodeState = new State('FlattenRenderer::FocusedNode')
+    this.nodesState = new State('FlattenRenderer::Nodes')
     this.filterPredicateState = new State('FlattenRenderer::FilterPredicate')
+    this.reversedState = new State('FlattenRenderer::Reversed')
     this.nodeWidthState = new State('FlattenRenderer::NodeWidth')
     this.nodeHeightState = new State('FlattenRenderer::NodeHeight')
-    this.nodeValueState = new State('FlattenRenderer::NodeValue')
     this.nodeContentState = new State('FlattenRenderer::NodeContent')
-    // FIXME: Hm...
-    this.reversedState = new State('FlattenRenderer::Reversed')
-    // FIXME: Need invalidate it when root element height changes too.
-    this.viewportState = new State('FlattenRenderer::Viewport')
+    this.pageContentState = new State('FlattenRenderer::PageContent')
 
-    // What needs to be configurable:
-    // - Node text (getNodeTitle)
-    // - Color (getNode)
-    // - Color width
-    // - Background
-    // How content callback will get stats neccessary for it to function (e.g. max delta)?
-
-    this.nodesState = new State('FlattenRenderer::Nodes', (state) => { this.updateNodes(state) })
-    this.nodesState.input(this.focusedNodeState)
-
+    /*
     this.nodesStatsState = new State('FlattenRenderer::NodesStats', (state) => { this.updateNodesStats(state) })
     this.nodesStatsState.input(this.nodesState)
     this.nodesStatsState.input(this.nodeValueState)
+    */
 
     this.filteredNodesState = new State('FlattenRenderer::FilteredNodes', (state) => { this.updateFilteredNodes(state) })
     this.filteredNodesState.input(this.nodesState)
     this.filteredNodesState.input(this.filterPredicateState)
 
+    /*
     this.filteredStatsState = new State('FlattenRenderer::FilteredStats', (state) => { this.updateFilteredStats(state) })
     this.filteredStatsState.input(this.filteredNodesState)
     this.filteredStatsState.input(this.nodeValueState)
     this.filteredStatsState.input(this.nodesStatsState)
+    */
 
-    // FIXME: This has a downside that nodes are still visible even if they will be hidden or renamed/reused. This
-    // FIXME: will launch an animation we probably want to avoid. Move it inside updatePage()?
     this.commonStyleState = new State('FlattenRenderer::CommonStyle', (state) => { this.updateCommonStyle(state) })
     this.commonStyleState.input(this.nodeWidthState)
     this.commonStyleState.input(this.nodeHeightState)
 
+    this.viewportState = new State('FlattenRenderer::Viewport')
+    this.pageContentState.input(this.filteredNodesState)
+    this.pageContentState.input(this.commonStyleState)
+    this.pageContentState.input(this.reversedState)
+
     this.pageState = new State('FlattenRenderer::Page', (state) => { this.updatePage(state) })
-    this.pageStateFocusedNodeInput = this.pageState.input(this.focusedNodeState)
+    this.pageStateNodesInput = this.pageState.input(this.nodesState)
     this.pageStateFilteredNodesInput = this.pageState.input(this.filteredNodesState)
     this.pageStateNodeHeightInput = this.pageState.input(this.nodeHeightState)
     this.pageStateNodeContentInput = this.pageState.input(this.nodeContentState)
-    this.pageStateReversedInput = this.pageState.input(this.reversedState)
-    this.pageState.input(this.nodesStatsState)
-    this.pageState.input(this.filteredStatsState)
-    this.pageState.input(this.nodeValueState)
-    this.pageState.input(this.commonStyleState)
+    this.pageStatePageContentInput = this.pageState.input(this.pageContentState)
+    this.pageStateCommonStyleInput = this.pageState.input(this.commonStyleState)
     this.pageState.input(this.viewportState)
 
     this.nodes = null
     this.filteredNodes = null
+    this.nodeWidthSpec = null
     this.nodeHeightSpec = null
     this.unusedElements = []
     this.pageBegin = 0
@@ -112,11 +102,13 @@ export class FlattenRenderer {
     nodesElement.style.width = '100%'
     nodesElement.style.position = 'absolute'
   }
-  setFocusedNode (focusedNode) {
-    if (this.focusedNode !== focusedNode) {
-      this.focusedNode = focusedNode
-      this.focusedNodeState.invalidate()
-    }
+  sendNodesState (nodes) {
+    this.nodes = nodes && nodes.length ? nodes : null
+    this.nodesState.send()
+  }
+  setNodes (nodes) {
+    this.setNodesState(nodes)
+    this.nodesState.invalidate()
   }
   setFilterPredicate (predicate) {
     if (this.filterPredicate !== predicate) {
@@ -124,53 +116,13 @@ export class FlattenRenderer {
       this.filterPredicateState.invalidate()
     }
   }
-  setNodeWidthSpec (width) {
-    this.nodeWidthSpec = width
+  setNodeWidthPixels (width) {
+    this.nodeWidthPixels = width
     this.nodeWidthState.invalidate()
   }
   setNodeHeightPixels (height) {
     this.nodeHeightPixels = height
     this.nodeHeightState.invalidate()
-  }
-  updateNodes (state) {
-    const focusedNode = this.focusedNode
-    const nodes = focusedNode ? focusedNode.children : null
-    this.nodes = nodes && nodes.length ? nodes : null
-  }
-  updateNodesStats (state) {
-    let maxValue = 0
-    let maxDelta = 0
-    const nodes = this.nodes
-    if (nodes) {
-      for (let i = nodes.length; i--;) {
-        const node = nodes[i]
-        const value = Math.abs(node.total)
-        const delta = Math.abs(node.delta)
-        if (maxValue < value) { maxValue = value }
-        if (maxDelta < delta) { maxDelta = delta }
-      }
-    }
-    this.nodesMaxValue = maxValue
-    this.nodesMaxDelta = maxDelta
-  }
-  updateFilteredStats (state) {
-    let maxValue = 0
-    let maxDelta = 0
-    const filteredNodes = this.filteredNodes
-    if (filteredNodes === this.nodes) {
-      maxValue = this.nodesMaxValue
-      maxDelta = this.nodesMaxDelta
-    } else if (filteredNodes) {
-      for (let i = filteredNodes.length; i--;) {
-        const node = filteredNodes[i]
-        const value = Math.abs(node.total)
-        const delta = Math.abs(node.delta)
-        if (maxValue < value) { maxValue = value }
-        if (maxDelta < delta) { maxDelta = delta }
-      }
-    }
-    this.filteredMaxValue = maxValue
-    this.filteredMaxDelta = maxDelta
   }
   updateFilteredNodes (state) {
     const nodes = this.nodes
@@ -189,21 +141,23 @@ export class FlattenRenderer {
     }
   }
   updateCommonStyle (state) {
-    this.nodeHeightSpec = this.nodeHeightPixels + 'px'
+    const nodeWidthPixels = this.nodeWidthPixels
+    this.nodeHeightSpec = null === nodeWidthPixels ? (nodeWidthPixels + 'px') : '100%'
+    const nodeHeightPixels = this.nodeHeightPixels
+    this.nodeHeightSpec = null === nodeHeightPixels ? (nodeHeightPixels + 'px') : '1.5em'
   }
   updatePage (state) {
     const nodeHeightPixels = this.nodeHeightPixels
     const filteredNodes = this.filteredNodes
     const filteredNodesCount = filteredNodes ? filteredNodes.length : 0
 
-    const commonStyleChanged = this.commonStyleState.changed
+    const nodesChanged = this.pageStateNodesInput.changed
     const filteredNodesChanged = this.pageStateFilteredNodesInput.changed
     const nodeHeightChanged = this.pageStateNodeHeightInput.changed
-    const focusedNodeChanged = this.pageStateFocusedNodeInput.changed
-    const reversedChanged = this.pageStateReversedInput.changed
     const nodeContentChanged = this.pageStateNodeContentInput.changed
-    const pageContentChanged = filteredNodesChanged || nodeHeightChanged || focusedNodeChanged || reversedChanged || nodeContentChanged
-    if (pageContentChanged) {
+    const pageContentChanged = this.pageStatePageContentInput.changed
+    const commonStyleChanged = this.pageStateCommonStyleInput.changed
+    if (filteredNodesChanged || nodeHeightChanged) {
       this.nodesElement.style.height = (nodeHeightPixels * filteredNodesCount) + 'px'
     }
     // Compute view port indexes.
@@ -211,8 +165,8 @@ export class FlattenRenderer {
     const viewportBegin = clip(Math.floor(scrollTop / nodeHeightPixels), 0, filteredNodesCount)
     const viewportEnd = clip(Math.ceil((scrollTop + this.element.offsetHeight) / nodeHeightPixels), 0, filteredNodesCount)
     const viewportLength = viewportEnd - viewportBegin
-    // Bail if just scrolling within current page threshold.
-    if (!pageContentChanged) {
+    // Allow to bail fast if just scrolling within current page threshold.
+    if (!pageContentChanged && !nodeContentChanged) {
       const pageThreshold = pageThresholdCoefficient * viewportLength
       const currentBegin = this.pageBegin
       const pageBeginOK = 0 === currentBegin || pageThreshold <= viewportBegin - currentBegin
@@ -225,21 +179,18 @@ export class FlattenRenderer {
     }
     // Recycle all page nodes if focused node changed.
     const pageNodes = this.pageNodes
-    if (focusedNodeChanged) {
+    if (nodesChanged) {
       for (let i = pageNodes.length; i--;) {
         this.recycleElement(pageNodes[i])
       }
       pageNodes.length = 0
     }
-    // Update properties common for all elements.
+    // Update common style on recycled elements only to preserve invariant that
+    // recycled elements have the right common style set.
     if (commonStyleChanged) {
       const unusedElements = this.unusedElements
       for (let i = unusedElements.length; i--;) {
         this.applyCommonStyle(unusedElements[i])
-      }
-      const pageNodes = this.pageNodes
-      for (let i = pageNodes.length; i--;) {
-        this.applyCommonStyle(pageNodes[i].element)
       }
     }
     // Compute updated page geometry.
@@ -262,8 +213,13 @@ export class FlattenRenderer {
       node.rev = pageRevision
       let element = node.element
       if (element) {
-        if (nodeContentChanged || pageContentChanged) {
+        if (pageContentChanged) {
           element.style.top = (i * nodeHeightPixels) + 'px'
+          if (commonStyleChanged) {
+            this.applyCommonStyle(element)
+          }
+        }
+        if (nodeContentChanged) {
           this.applyContent(element, node)
         }
       } else {
@@ -274,10 +230,15 @@ export class FlattenRenderer {
       }
     }
     // Recycle elements from nodes that were in `pageNodes` list before, but now are not.
-    for (let i = pageNodes.length; i--;) {
-      const node = pageNodes[i]
-      if (pageRevision !== node.rev) {
-        this.recycleElement(node)
+    if (!nodesChanged) {
+      for (let i = pageNodes.length; i--;) {
+        const node = pageNodes[i]
+        if (pageRevision !== node.rev) {
+          const element = this.recycleElement(node)
+          if (commonStyleChanged && element) {
+            this.applyCommonStyle(element)
+          }
+        }
       }
     }
     // Update page geometry fields and `pageNodes` list.
@@ -293,8 +254,8 @@ export class FlattenRenderer {
     let element = unusedElements.pop()
     if (!element) {
       element = document.createElement('div')
-      element.className = 'fg-node'
       element.style.display = 'none'
+      element.className = this.nodeClass
       element.addEventListener('click', this.nodeClickListener)
       element.addEventListener('mouseenter', this.nodeMouseEnterListener)
       element.addEventListener('mouseleave', this.nodeMouseLeaveListener)
@@ -314,6 +275,7 @@ export class FlattenRenderer {
       element.__node__ = null
       this.unusedElements.push(element)
     }
+    return element
   }
   applyCommonStyle (element) {
     const style = element.style
