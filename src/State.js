@@ -386,6 +386,7 @@ export class State {
   // Must only be used
   send (value) {
     if (this.inputsChanged) {
+      // FIXME: Here we can assert that producers of all (changed?) inputs must be clean already.
       stateValidate(this)
     }
     outputSend(this, value)
