@@ -1,5 +1,4 @@
 import {State} from './State'
-import {deltaColor} from './NodeRenderer'
 
 const pageThresholdCoefficient = 0.5
 const pageLengthCoefficient = 1.5
@@ -15,13 +14,7 @@ function clip (value, min, max) {
 }
 
 // FIXME: Things to address:
-//   [ ] What color to use when delta is not valid?
-//   [ ] How element content is set
-//   [ ] How to know that nodes have delta?
-//   [ ] How to send information / updates from `model` to `renderer`.
-//   [ ] How to compute min/max total/self/delta
 //   [ ] Chrome / Safari 100% height issues (check FireFox as well)
-//   [ ] updatePage() logic is too complicated and hard to follow, not optimal as well
 export class NodeListRenderer {
   constructor (causalDomain) {
     this.nodes = null
@@ -30,11 +23,12 @@ export class NodeListRenderer {
     this.nodeWidthPixels = null
     this.nodeHeightPixels = null
 
-    this.nodeClass = 'fg-node'
     this.nodeClickListener = null
     this.nodeMouseEnterListener = null
     this.nodeMouseLeaveListener = null
     this.nodeMouseMoveListener = null
+    this.nodeElementFunction = null
+    this.nodeContentFunction = null
 
     this.nodesState = new State('FlattenRenderer::Nodes')
     this.filterPredicateState = new State('FlattenRenderer::FilterPredicate')
@@ -142,7 +136,7 @@ export class NodeListRenderer {
   }
   updateCommonStyle (state) {
     const nodeWidthPixels = this.nodeWidthPixels
-    this.nodeHeightSpec = null === nodeWidthPixels ? (nodeWidthPixels + 'px') : '100%'
+    this.nodeWidthSpec = null === nodeWidthPixels ? (nodeWidthPixels + 'px') : '100%'
     const nodeHeightPixels = this.nodeHeightPixels
     this.nodeHeightSpec = null === nodeHeightPixels ? (nodeHeightPixels + 'px') : '1.5em'
   }
@@ -208,6 +202,7 @@ export class NodeListRenderer {
     const pageReversed = this.reversed
     const pageDirection = pageReversed ? -1 : 1
     const pageBase = pageReversed ? pageEnd - 1 : pageBegin
+    const nodeContentFunction = this.nodeContentFunction || ((element, node, initial) => {})
     for (let i = pageBegin, k = pageBase; i < pageEnd; ++i, k += pageDirection) {
       const node = this.filteredNodes[k]
       node.rev = pageRevision
@@ -220,11 +215,11 @@ export class NodeListRenderer {
           }
         }
         if (nodeContentChanged) {
-          this.applyContent(element, node)
+          nodeContentFunction(element, node, false)
         }
       } else {
         element = this.createElement(node)
-        this.applyContent(element, node)
+        nodeContentFunction(element, node, true)
         element.style.top = (i * nodeHeightPixels) + 'px'
         element.style.display = 'block'
       }
@@ -254,8 +249,13 @@ export class NodeListRenderer {
     let element = unusedElements.pop()
     if (!element) {
       element = document.createElement('div')
-      element.style.display = 'none'
-      element.className = this.nodeClass
+      const style = element.style
+      style.display = 'none'
+      style.position = 'absolute'
+      const nodeElementFunction = this.nodeElementFunction
+      if (nodeElementFunction) {
+        nodeElementFunction(element)
+      }
       element.addEventListener('click', this.nodeClickListener)
       element.addEventListener('mouseenter', this.nodeMouseEnterListener)
       element.addEventListener('mouseleave', this.nodeMouseLeaveListener)
@@ -281,11 +281,5 @@ export class NodeListRenderer {
     const style = element.style
     style.width = this.nodeWidthSpec
     style.height = this.nodeHeightSpec
-  }
-  applyContent (element, node) {
-    element.innerText = node.name
-    const prcnt = (Math.abs(node.total) / this.nodesMaxValue * 100) + '%'
-    const color = deltaColor(node.delta, this.maxDelta)
-    element.style.background = `linear-gradient(to right, ${color} ${prcnt}, #fff ${prcnt})`
   }
 }
