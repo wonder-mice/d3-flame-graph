@@ -17,6 +17,16 @@ function outputSetClean (state) {
         input.status = inputUnchanged
         const state = input.consumer
         if (!--state.inputsChanged) {
+          // There are two approaches to reset `outputInputsMarked`:
+          // 1. In `statesUpdate()` after state is picked from the queue
+          // 2. In `stateValidate()` AND everywhere state can become clean during update phase.
+          // Second approach will take state out of update graph as soon as first `send()` or
+          // `cancel()` was called (including cases when it was called by/from producer states
+          // as an optimization). This will make it impossible to make this state dirty again.
+          // But this will requre to find all places where state can become clean during update
+          // phase. Looks like this is the only one (except `stateValidate()` itself).
+          // Taking first approach for now, since it's simpler and more robust.
+          // state.outputInputsMarked = 0
           queue[k++] = state.outputInputs
         }
       }
@@ -30,14 +40,26 @@ function outputSetClean (state) {
 // if input is `changed`, it will remain changed (because `changed` is `dirty`
 // too).
 function outputSetDirty (state) {
+  // It shouldn't be possible to start at `state` that is in update graph
+  // (0 !== state.outputInputsMarked), then encounter another state which is NOT
+  // in update graph (0 === state.outputInputsMarked) AND THEN encounter state
+  // that is in update graph again. Because of that `state.outputInputsMarked`
+  // can be used to verify that we are not additing states to update graph
+  // (otherwise we would need to compare `outputInputsMarked` of producer with
+  // `outputInputsMarked` of consumer for each input).
+  const outputInputsMarked = state.outputInputsMarked
   const queue = [state.outputInputs]
   for (let k = queue.length; k--;) {
     const outputInputs = queue[k]
     for (let i = outputInputs.length; i--;) {
       const input = outputInputs[i]
       if (inputUnchanged === input.status) {
-        input.status = inputPending
         const consumer = input.consumer
+        // This is effectively an assert for debug purposes only.
+        if (!outputInputsMarked && consumer.outputInputsMarked) {
+          throw Error(`State that is not in update graph ("${input.producer.name}") can't be invalidated if it has consumers that are in update graph ("${consumer.name}").`)
+        }
+        input.status = inputPending
         if (!consumer.inputsChanged++) {
           queue[k++] = consumer.outputInputs
         }
@@ -199,6 +221,7 @@ function statesCollect (states) {
   for (let k = states.length, n = sorted.length; k--;) {
     const state = states[k]
     if (state.inputsChanged && !--state.outputInputsMarked) {
+      state.outputInputsMarked = 2000000000
       sorted[n++] = state
       const inputs = state.inputs
       for (let i = inputs.length; i--;) {
@@ -227,6 +250,7 @@ function statesUpdate (states) {
       stateUpdate(state)
       Metrics.end('' + state.inputsChanged + '/' + state.inputs.length + ' inputs changed')
     }
+    state.outputInputsMarked = 0
   }
   Metrics.end('' + updatedN + '/' + dirtyN + ' states updated')
 }
