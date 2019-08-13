@@ -329,7 +329,23 @@ export class StateInput {
     this.consumer = consumer
     this.producer = producer
     this.traits = traits
-    this.status = inputChanged
+    // Initial status values is a bit tricky. Obviosly, `inputUnchanged` will not work,
+    // because then newly added states will not be collected during update. However,
+    // both `inputPending` and `inputChanged` will work to some extent, but with few
+    // interesting differences. `inputPending` is good, because it's similar to what
+    // happens when state is dirtied. E.g. if input has associated traits, `reset()`
+    // or `send()` will be called as expected. With `inputChanged`, `reset()` will NOT
+    // be called (because when input is in `inputChanged` it means somebody already
+    // did `send()` or `reset()` on it explicitly). But using `inputPending` will cause
+    // `changed` property to return `false` for newly created inputs. It's not a problem
+    // when input is connected to some producer, then when producer is validated its
+    // output inputs will be marked as `inputChanged` and in consumer action callback
+    // `changed` property will return correct value. However, if input is dangling and
+    // has no producer, then nobody will set its status to `inputChanged`. Thus consumer
+    // action callback will observer input's status as `inputPending` and `changed` will
+    // return `false`. Which is not totally incorrect, since nobody called `send()` or
+    // `cancel()` on this input, so its status is undefined (i.e. pending).
+    this.status = inputPending
   }
   get changed () {
     // Status `pending` is not considered `changed` here.

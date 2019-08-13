@@ -17,7 +17,6 @@ test('State.invalidate() simple transitivity', function (t) {
 test('State.update() handles inputs without producer', function (t) {
     const a = new flamegraph.State('A')
     const ai = a.input()
-    t.ok(ai.changed, 'a input changed')
     t.ok(a.dirty, 'a is dirty')
     flamegraph.State.update(a)
     t.notOk(a.dirty, 'a is clean')
