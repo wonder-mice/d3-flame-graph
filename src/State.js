@@ -417,6 +417,12 @@ export class State {
   // Invalidates state directly, regardless of status of its inputs. Invalidated
   // state can only by validated during state graph update phase.
   invalidate () {
+    // Recent developments in `State` usage indicates that it should be OK to
+    // call `invalidate()` during graph update phase. The only requirement is that
+    // states that are not in update graph (0 === state.outputInputsMarked) can't
+    // dirty states that are in update graph (0 !== state.outputInputsMarked),
+    // because this will require to add new states to update graph, which is not
+    // possible.
     if (!this.inputsChanged++) {
       outputSetDirty(this)
     }
