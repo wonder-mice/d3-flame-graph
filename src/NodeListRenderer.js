@@ -13,8 +13,6 @@ function clip (value, min, max) {
   return value
 }
 
-// FIXME: Things to address:
-//   [ ] Chrome / Safari 100% height issues (check FireFox as well)
 export class NodeListRenderer {
   constructor (causalDomain) {
     this.nodes = null
@@ -30,47 +28,33 @@ export class NodeListRenderer {
     this.nodeElementFunction = null
     this.nodeContentFunction = null
 
-    this.nodesState = new State('FlattenRenderer::Nodes')
-    this.filterPredicateState = new State('FlattenRenderer::FilterPredicate')
-    this.reversedState = new State('FlattenRenderer::Reversed')
-    this.nodeWidthState = new State('FlattenRenderer::NodeWidth')
-    this.nodeHeightState = new State('FlattenRenderer::NodeHeight')
-    this.nodeContentState = new State('FlattenRenderer::NodeContent')
-    this.pageContentState = new State('FlattenRenderer::PageContent')
+    this.nodesState = new State('NodeListRenderer::Nodes')
+    this.filterPredicateState = new State('NodeListRenderer::FilterPredicate')
+    this.reversedState = new State('NodeListRenderer::Reversed')
+    this.nodeWidthState = new State('NodeListRenderer::NodeWidth', (state) => { this.updateNodeWidth(state) })
+    this.nodeHeightState = new State('NodeListRenderer::NodeHeight', (state) => { this.updateNodeHeight(state) })
+    this.nodeContentState = new State('NodeListRenderer::NodeContent')
 
-    /*
-    this.nodesStatsState = new State('FlattenRenderer::NodesStats', (state) => { this.updateNodesStats(state) })
-    this.nodesStatsState.input(this.nodesState)
-    this.nodesStatsState.input(this.nodeValueState)
-    */
-
-    this.filteredNodesState = new State('FlattenRenderer::FilteredNodes', (state) => { this.updateFilteredNodes(state) })
+    this.filteredNodesState = new State('NodeListRenderer::FilteredNodes', (state) => { this.updateFilteredNodes(state) })
     this.filteredNodesState.input(this.nodesState)
     this.filteredNodesState.input(this.filterPredicateState)
 
-    /*
-    this.filteredStatsState = new State('FlattenRenderer::FilteredStats', (state) => { this.updateFilteredStats(state) })
-    this.filteredStatsState.input(this.filteredNodesState)
-    this.filteredStatsState.input(this.nodeValueState)
-    this.filteredStatsState.input(this.nodesStatsState)
-    */
-
-    this.commonStyleState = new State('FlattenRenderer::CommonStyle', (state) => { this.updateCommonStyle(state) })
+    this.commonStyleState = new State('NodeListRenderer::CommonStyle')
     this.commonStyleState.input(this.nodeWidthState)
     this.commonStyleState.input(this.nodeHeightState)
 
-    this.viewportState = new State('FlattenRenderer::Viewport')
-    this.pageContentState.input(this.filteredNodesState)
-    this.pageContentState.input(this.commonStyleState)
-    this.pageContentState.input(this.reversedState)
+    this.layoutState = new State('NodeListRenderer::Layout', (state) => { this.updateLayout(state) })
+    this.layoutState.input(this.filteredNodesState)
+    this.layoutState.input(this.nodeHeightState)
+    this.layoutState.input(this.reversedState)
 
-    this.pageState = new State('FlattenRenderer::Page', (state) => { this.updatePage(state) })
+    this.viewportState = new State('NodeListRenderer::Viewport')
+
+    this.pageState = new State('NodeListRenderer::Page', (state) => { this.updatePage(state) })
     this.pageStateNodesInput = this.pageState.input(this.nodesState)
-    this.pageStateFilteredNodesInput = this.pageState.input(this.filteredNodesState)
-    this.pageStateNodeHeightInput = this.pageState.input(this.nodeHeightState)
-    this.pageStateNodeContentInput = this.pageState.input(this.nodeContentState)
-    this.pageStatePageContentInput = this.pageState.input(this.pageContentState)
+    this.pageStateLayoutInput = this.pageState.input(this.layoutState)
     this.pageStateCommonStyleInput = this.pageState.input(this.commonStyleState)
+    this.pageStateNodeContentInput = this.pageState.input(this.nodeContentState)
     this.pageState.input(this.viewportState)
 
     this.nodes = null
@@ -96,19 +80,17 @@ export class NodeListRenderer {
     nodesElement.style.width = '100%'
     nodesElement.style.position = 'absolute'
   }
-  sendNodesState (nodes) {
-    this.nodes = nodes && nodes.length ? nodes : null
-    this.nodesState.send()
+  setReversed (reversed) {
+    this.reversed = reversed
+    this.reversedState.invalidate()
   }
   setNodes (nodes) {
-    this.setNodesState(nodes)
+    this.nodes = nodes
     this.nodesState.invalidate()
   }
   setFilterPredicate (predicate) {
-    if (this.filterPredicate !== predicate) {
-      this.filterPredicate = predicate
-      this.filterPredicateState.invalidate()
-    }
+    this.filterPredicate = predicate
+    this.filterPredicateState.invalidate()
   }
   setNodeWidthPixels (width) {
     this.nodeWidthPixels = width
@@ -134,11 +116,19 @@ export class NodeListRenderer {
       this.filteredNodes = nodes
     }
   }
-  updateCommonStyle (state) {
+  updateNodeWidth (state) {
     const nodeWidthPixels = this.nodeWidthPixels
     this.nodeWidthSpec = null === nodeWidthPixels ? (nodeWidthPixels + 'px') : '100%'
+  }
+  updateNodeHeight (state) {
     const nodeHeightPixels = this.nodeHeightPixels
     this.nodeHeightSpec = null === nodeHeightPixels ? (nodeHeightPixels + 'px') : '1.5em'
+  }
+  updateLayout (state) {
+    const nodeHeightPixels = this.nodeHeightPixels
+    const filteredNodes = this.filteredNodes
+    const filteredNodesCount = filteredNodes ? filteredNodes.length : 0
+    this.nodesElement.style.height = (nodeHeightPixels * filteredNodesCount) + 'px'
   }
   updatePage (state) {
     const nodeHeightPixels = this.nodeHeightPixels
@@ -146,21 +136,16 @@ export class NodeListRenderer {
     const filteredNodesCount = filteredNodes ? filteredNodes.length : 0
 
     const nodesChanged = this.pageStateNodesInput.changed
-    const filteredNodesChanged = this.pageStateFilteredNodesInput.changed
-    const nodeHeightChanged = this.pageStateNodeHeightInput.changed
+    const layoutChanged = this.pageStateLayoutInput.changed
     const nodeContentChanged = this.pageStateNodeContentInput.changed
-    const pageContentChanged = this.pageStatePageContentInput.changed
     const commonStyleChanged = this.pageStateCommonStyleInput.changed
-    if (filteredNodesChanged || nodeHeightChanged) {
-      this.nodesElement.style.height = (nodeHeightPixels * filteredNodesCount) + 'px'
-    }
     // Compute view port indexes.
     const scrollTop = this.element.scrollTop
     const viewportBegin = clip(Math.floor(scrollTop / nodeHeightPixels), 0, filteredNodesCount)
     const viewportEnd = clip(Math.ceil((scrollTop + this.element.offsetHeight) / nodeHeightPixels), 0, filteredNodesCount)
     const viewportLength = viewportEnd - viewportBegin
     // Allow to bail fast if just scrolling within current page threshold.
-    if (!pageContentChanged && !nodeContentChanged) {
+    if (!layoutChanged && !nodeContentChanged && !commonStyleChanged) {
       const pageThreshold = pageThresholdCoefficient * viewportLength
       const currentBegin = this.pageBegin
       const pageBeginOK = 0 === currentBegin || pageThreshold <= viewportBegin - currentBegin
@@ -208,11 +193,11 @@ export class NodeListRenderer {
       node.rev = pageRevision
       let element = node.element
       if (element) {
-        if (pageContentChanged) {
+        if (layoutChanged) {
           element.style.top = (i * nodeHeightPixels) + 'px'
-          if (commonStyleChanged) {
-            this.applyCommonStyle(element)
-          }
+        }
+        if (commonStyleChanged) {
+          this.applyCommonStyle(element)
         }
         if (nodeContentChanged) {
           nodeContentFunction(element, node, false)
