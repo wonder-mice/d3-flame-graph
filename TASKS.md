@@ -1,6 +1,11 @@
 # Tasks
 
-- [ ] Don't allow suggestions in Filter in Flatten list
+- [ ] StructureView should not invert children sorting order.
+- [ ] renderer.nodeContentState is likely not the best name for the state
+- [ ] Who shuould set default node height for NodeListRenderer when used via FlattenView?
+- [ ] Review elements hierarchy in FlattenView
+- [ ] Chrome / Safari 100% height issues (check FireFox as well)
+- [x] Don't allow suggestions in Filter in Flatten list
 - [ ] Compare boot args
 - [ ] Implement all selection buttons
 - [ ] Deck must have an option for setting minimum node width
