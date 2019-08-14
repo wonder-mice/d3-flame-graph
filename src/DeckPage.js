@@ -5,7 +5,7 @@ import {NodeStructureTraits} from './Node'
 import {NodeSelection, FlattenNodeSelection} from './NodeSelection'
 import {nodeIndexNodes} from './NodeIndex'
 import {StructureViewOptions, StructureView} from './StructureView'
-import {FlattenViewOptions, FlattenView} from './FlattenView'
+import {FlattenView} from './FlattenView'
 import {SplitView} from './SplitView'
 
 export class DeckPage {
@@ -40,9 +40,7 @@ export class DeckPage {
 
     const secondaryModel = this.secondaryModel = new FlattenModel()
     secondaryModel.setStructureTraits(NodeStructureTraits)
-    const secondaryViewOptions = new FlattenViewOptions()
-    secondaryViewOptions.causalDomain = causalDomain
-    const secondaryView = this.secondaryView = new FlattenView(secondaryModel, secondaryViewOptions)
+    const secondaryView = this.secondaryView = new FlattenView(secondaryModel, causalDomain)
     secondaryView.tooltipContentView.setSelectionInterface(new FlattenNodeSelection(primarySelection))
     secondaryElement.appendChild(secondaryView.element)
     state.input(secondaryView.state)
