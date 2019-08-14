@@ -68,6 +68,7 @@ export class NodeListRenderer {
     this.pageRevision = 0
 
     const element = this.element = document.createElement('div')
+    element.className = 'fg-nodelist'
     element.style.overflow = 'auto'
     element.style.position = 'relative'
     element.style.width = '100%'
@@ -77,6 +78,7 @@ export class NodeListRenderer {
       causalDomain.update()
     })
     const nodesElement = this.nodesElement = element.appendChild(document.createElement('div'))
+    nodesElement.className = 'fg-nodelist-nodes'
     nodesElement.style.width = '100%'
     nodesElement.style.position = 'absolute'
   }
