@@ -443,10 +443,9 @@ export class State {
     }
     outputSetClean(this)
   }
-  static pipe (name, consumer, producer, action) {
-    const state = new State(name, action)
+  static wrap (producer, action) {
+    const state = new State(producer.name + '$', action)
     state.input(producer)
-    consumer.input(state)
     return state
   }
   static update (...states) { statesUpdate(states) }
