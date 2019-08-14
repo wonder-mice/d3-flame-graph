@@ -16,26 +16,23 @@ export class NodeLayout {
     this.totalWidth = 0
     this.nodeWidthMin = 3
     this.rowHeight = 18
-    this.hierarchy = true
     this.hasDelta = false
   }
   layout (rootNode, focusNode, revision) {
-    let node, i, children, childrenY, n
-    let subtotal, abstotal, ratio, child, childX, childWidth, delta
+    let node
     let totalHeight = 0
     const nodes = []
     const totalWidth = this.totalWidth
     const nodeWidthMin = this.nodeWidthMin
     const rowHeight = this.rowHeight
     const hasDelta = this.hasDelta
-    const hierarchy = this.hierarchy
     const queue = []
     let maxDelta = 0
     const stemNodes = []
     focusNode = focusNode || rootNode
     node = focusNode
     do { stemNodes.push(node) } while ((node = node.parent))
-    for (i = stemNodes.length; i--;) {
+    for (let i = stemNodes.length; i--;) {
       node = stemNodes[i]
       node.width = totalWidth
       node.x = 0
@@ -51,24 +48,23 @@ export class NodeLayout {
 
     // Layout branches.
     while ((node = queue.pop())) {
-      children = node.children
-      if (!children || !(n = children.length)) {
+      const children = node.children
+      if (!children) {
         continue
       }
-      childrenY = node.y + rowHeight
-      if (!hierarchy) {
-        for (subtotal = 0, i = n; i--;) {
-          subtotal = subtotal < (abstotal = Math.abs(children[i].total)) ? abstotal : subtotal
-        }
-      } else {
-        for (subtotal = Math.abs(node.self), i = n; i--;) {
-          subtotal += Math.abs(children[i].total)
-        }
+      const n = children.length
+      if (!n) {
+        continue
       }
-      ratio = 0 < subtotal ? node.width / subtotal : 0
-      for (childX = node.x, i = n; i--;) {
-        child = children[i]
-        childWidth = Math.floor(Math.abs(child.total) * ratio)
+      const childrenY = node.y + rowHeight
+      let subtotal = Math.abs(node.self)
+      for (let i = n; i--;) {
+        subtotal += Math.abs(children[i].total)
+      }
+      const ratio = 0 < subtotal ? node.width / subtotal : 0
+      for (let i = 0, childX = node.x; i < n; ++i) {
+        const child = children[i]
+        const childWidth = Math.floor(Math.abs(child.total) * ratio)
         if (childWidth < nodeWidthMin) {
           if (child.mark & 0b0011) {
             node.mark |= 0b1000
@@ -78,14 +74,10 @@ export class NodeLayout {
         child.width = childWidth
         child.x = childX
         child.y = childrenY
-        if (!hierarchy) {
-          childrenY += rowHeight
-        } else {
-          childX += childWidth
-          queue.push(child)
-        }
+        childX += childWidth
+        queue.push(child)
         if (hasDelta) {
-          delta = Math.abs(child.delta)
+          const delta = Math.abs(child.delta)
           if (maxDelta < delta) {
             maxDelta = delta
           }
