@@ -1,5 +1,5 @@
 import {State} from './State'
-import {StateUpdater} from './StateUpdater'
+import {ElementSize} from './ElementSize'
 
 export class NodeView {
   constructor (causalDomain) {
@@ -23,31 +23,9 @@ export class NodeView {
     nodesElement.style.overflow = 'hidden'
     nodesElement.style.flex = '1 0 0%'
 
-    this.layoutWidth = 0
-    this.layoutWidthState = new State('StructureView::LayoutWidth', (state) => { this.updateLayoutWidth(state) })
-    const stateUpdater = StateUpdater.updater(this.causalDomain)
-    const layoutWidthChanged = (width) => {
-      if (width !== this.layoutWidth) {
-        this.layoutWidthState.invalidate()
-        stateUpdater.update(1000, 100)
-      }
-    }
-    if (typeof ResizeObserver !== 'undefined') {
-      this.resizeObserver = new ResizeObserver((entries) => { layoutWidthChanged(entries[0].contentRect.width) })
-      this.resizeObserver.observe(this.nodesElement)
-    } else {
-      window.addEventListener('resize', () => { layoutWidthChanged(this.nodesElement.getBoundingClientRect().width) })
-    }
+    this.nodesElementSize = new ElementSize(this.nodesElement, this.causalDomain)
   }
   setResized () {
-    this.layoutWidthState.invalidate()
-  }
-  updateLayoutWidth (state) {
-    const width = this.nodesElement.getBoundingClientRect().width
-    if (this.layoutWidth !== width) {
-      this.layoutWidth = width
-    } else {
-      state.cancel()
-    }
+    this.nodesElementSize.invalidate()
   }
 }
