@@ -74,6 +74,8 @@ export class FlattenView extends NodeView {
 
     this.state.input(renderer.pageState)
     this.state.input(this.tooltipPositionState)
+    renderer.element.style.width = '100%'
+    renderer.element.style.height = '100%'
     this.nodesElement.appendChild(renderer.element)
   }
   onNodeClick (element, event) {

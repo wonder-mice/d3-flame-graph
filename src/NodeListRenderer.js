@@ -71,8 +71,6 @@ export class NodeListRenderer {
     element.className = 'fg-nodelist'
     element.style.overflow = 'auto'
     element.style.position = 'relative'
-    element.style.width = '100%'
-    element.style.height = '100%'
     element.addEventListener('scroll', (event) => {
       this.viewportState.invalidate()
       causalDomain.update()
