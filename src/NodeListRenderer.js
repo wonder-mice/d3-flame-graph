@@ -1,4 +1,5 @@
 import {State} from './State'
+import {ElementSize} from './ElementSize'
 
 const pageThresholdCoefficient = 0.5
 const pageLengthCoefficient = 1.5
@@ -18,7 +19,6 @@ export class NodeListRenderer {
     this.nodes = null
     this.filterPredicate = null
     this.reversed = false
-    this.nodeWidthPixels = null
     this.nodeHeightPixels = null
 
     this.nodeClickListener = null
@@ -31,7 +31,6 @@ export class NodeListRenderer {
     this.nodesState = new State('NodeListRenderer::Nodes')
     this.filterPredicateState = new State('NodeListRenderer::FilterPredicate')
     this.reversedState = new State('NodeListRenderer::Reversed')
-    this.nodeWidthState = new State('NodeListRenderer::NodeWidth', (state) => { this.updateNodeWidth(state) })
     this.nodeHeightState = new State('NodeListRenderer::NodeHeight', (state) => { this.updateNodeHeight(state) })
     this.nodeContentState = new State('NodeListRenderer::NodeContent')
 
@@ -39,8 +38,7 @@ export class NodeListRenderer {
     this.filteredNodesState.input(this.nodesState)
     this.filteredNodesState.input(this.filterPredicateState)
 
-    this.commonStyleState = new State('NodeListRenderer::CommonStyle')
-    this.commonStyleState.input(this.nodeWidthState)
+    this.commonStyleState = new State('NodeListRenderer::CommonStyle', (state) => { this.updateCommonStyle(state) })
     this.commonStyleState.input(this.nodeHeightState)
 
     this.layoutState = new State('NodeListRenderer::Layout', (state) => { this.updateLayout(state) })
@@ -75,6 +73,10 @@ export class NodeListRenderer {
       this.viewportState.invalidate()
       causalDomain.update()
     })
+    this.elementSize = new ElementSize(element, causalDomain)
+    this.commonStyleState.input(this.elementSize.widthState)
+    this.viewportState.input(this.elementSize.heightState)
+
     const nodesElement = this.nodesElement = element.appendChild(document.createElement('div'))
     nodesElement.className = 'fg-nodelist-nodes'
     nodesElement.style.width = '100%'
@@ -91,10 +93,6 @@ export class NodeListRenderer {
   setFilterPredicate (predicate) {
     this.filterPredicate = predicate
     this.filterPredicateState.invalidate()
-  }
-  setNodeWidthPixels (width) {
-    this.nodeWidthPixels = width
-    this.nodeWidthState.invalidate()
   }
   setNodeHeightPixels (height) {
     this.nodeHeightPixels = height
@@ -116,9 +114,8 @@ export class NodeListRenderer {
       this.filteredNodes = nodes
     }
   }
-  updateNodeWidth (state) {
-    const nodeWidthPixels = this.nodeWidthPixels
-    this.nodeWidthSpec = null === nodeWidthPixels ? (nodeWidthPixels + 'px') : '100%'
+  updateCommonStyle (state) {
+    this.nodeWidthSpec = this.elementSize.width + 'px'
   }
   updateNodeHeight (state) {
     const nodeHeightPixels = this.nodeHeightPixels
@@ -142,7 +139,7 @@ export class NodeListRenderer {
     // Compute view port indexes.
     const scrollTop = this.element.scrollTop
     const viewportBegin = clip(Math.floor(scrollTop / nodeHeightPixels), 0, filteredNodesCount)
-    const viewportEnd = clip(Math.ceil((scrollTop + this.element.offsetHeight) / nodeHeightPixels), 0, filteredNodesCount)
+    const viewportEnd = clip(Math.ceil((scrollTop + this.elementSize.height) / nodeHeightPixels), 0, filteredNodesCount)
     const viewportLength = viewportEnd - viewportBegin
     // Allow to bail fast if just scrolling within current page threshold.
     if (!layoutChanged && !nodeContentChanged && !commonStyleChanged) {
