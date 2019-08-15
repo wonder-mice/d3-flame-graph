@@ -33,7 +33,7 @@ export class StructureView extends NodeView {
     this.layoutState = new State('StructureView::Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(model.orderState)
     this.layoutState.input(model.valueState)
-    this.layoutState.input(this.layoutWidthState)
+    this.layoutState.input(this.nodesElementSize.widthState)
     this.layoutState.input(this.focusedNodeState)
 
     const renderer = this.renderer = new NodeRenderer(this.nodesElement)
@@ -119,7 +119,7 @@ export class StructureView extends NodeView {
   updateLayout (state) {
     const model = this.model
     const layout = this.layout
-    layout.totalWidth = this.layoutWidth
+    layout.totalWidth = this.nodesElementSize.width
     layout.hasDelta = model.valueTraits.delta
     this.layoutResult = layout.layout(model.rootNode, this.focusedNode, ++this.revision)
   }
