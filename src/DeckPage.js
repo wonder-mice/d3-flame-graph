@@ -23,11 +23,11 @@ export class DeckPage {
     const primaryElement = this.primaryElement = splitView.left.appendChild(document.createElement('div'))
     primaryElement.style.width = '100%'
     primaryElement.style.height = '100%'
-    primaryElement.style.overflow = 'auto'
+    // primaryElement.style.overflow = 'auto'
     const secondaryElement = this.secondaryElement = splitView.right.appendChild(document.createElement('div'))
     secondaryElement.style.width = '100%'
     secondaryElement.style.height = '100%'
-    secondaryElement.style.overflow = 'auto'
+    // secondaryElement.style.overflow = 'auto'
 
     const primaryModel = this.primaryModel = new StructureModel()
     const primarySelection = this.primarySelection = new NodeSelection(primaryModel)
@@ -36,6 +36,8 @@ export class DeckPage {
     const primaryView = this.primaryView = new StructureView(primaryModel, primaryViewOptions)
     primaryView.tooltipContentView.setSelectionInterface(primarySelection)
     primaryElement.appendChild(primaryView.element)
+    primaryView.element.style.width = '100%'
+    primaryView.element.style.height = '100%'
     state.input(primaryView.state)
 
     const secondaryModel = this.secondaryModel = new FlattenModel()
@@ -43,6 +45,8 @@ export class DeckPage {
     const secondaryView = this.secondaryView = new FlattenView(secondaryModel, causalDomain)
     secondaryView.tooltipContentView.setSelectionInterface(new FlattenNodeSelection(primarySelection))
     secondaryElement.appendChild(secondaryView.element)
+    secondaryView.element.style.width = '100%'
+    secondaryView.element.style.height = '100%'
     state.input(secondaryView.state)
 
     this.primaryHighlightMirrorsSecondary = false

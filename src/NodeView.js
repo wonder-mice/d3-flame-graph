@@ -15,12 +15,13 @@ export class NodeView {
     toolbarElement.className = 'fg-toolbar'
     toolbarElement.style.display = 'flex'
     toolbarElement.style.flexDirection = 'row'
-    toolbarElement.style.flexShrink = '0'
+    toolbarElement.style.flexGrow = '0'
 
     const nodesElement = this.nodesElement = element.appendChild(document.createElement('div'))
     nodesElement.className = 'fg-nodeview-nodes'
     nodesElement.style.position = 'relative'
     nodesElement.style.overflow = 'hidden'
+    nodesElement.style.flex = '1 0 0%'
 
     this.layoutWidth = 0
     this.layoutWidthState = new State('StructureView::LayoutWidth', (state) => { this.updateLayoutWidth(state) })
