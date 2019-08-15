@@ -55,9 +55,6 @@ export class FlattenView extends NodeView {
     renderer.nodeContentState.input(this.filteredStatsState)
     renderer.nodeContentState.input(model.valueState)
     renderer.filteredNodesState.input(model.orderState)
-    renderer.nodeWidthState.input(State.wrap(this.layoutWidthState, (state) => {
-      renderer.setNodeWidthPixels(this.layoutWidth)
-    }))
     renderer.nodesState.input(State.wrap(model.structureNodeState, (state) => {
       renderer.setNodes(this.model.structureNode.children)
     }))
