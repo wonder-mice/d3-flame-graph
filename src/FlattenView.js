@@ -2,20 +2,31 @@ import {State} from './State'
 import {stringFilterPlaceholder, stringFilterTooltip, stringFilterPredicate} from './StringFilter'
 import {deltaColor} from './NodeRenderer'
 import {NodeListRenderer} from './NodeListRenderer'
-import {NodeView} from './NodeView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
 import {EnvironmentState, generateElementId, elementWithId} from './EnvironmentState'
 
-export class FlattenView extends NodeView {
+export class FlattenView {
   constructor (model, causalDomain) {
-    super(causalDomain)
+    this.state = new State('FlattenView::State')
+    this.causalDomain = causalDomain || this.state
     this.model = model
 
+    const element = this.element = document.createElement('div')
+    element.className = 'fg-flatten'
+    element.style.display = 'flex'
+    element.style.flexDirection = 'column'
+
+    const toolbarElement = this.toolbarElement = element.appendChild(document.createElement('div'))
+    toolbarElement.className = 'fg-toolbar'
+    toolbarElement.style.display = 'flex'
+    toolbarElement.style.flexDirection = 'row'
+    toolbarElement.style.flexGrow = '0'
+
     const nodeFilterId = generateElementId('node-filter')
-    this.toolbarElement.innerHTML = (
+    toolbarElement.innerHTML = (
 `<input id="${nodeFilterId}" type="text" style="flex: 1 0" class="fg-input fg-input-mono" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`)
-    const nodeFilterElement = this.nodeFilterElement = elementWithId(this.toolbarElement, nodeFilterId)
+    const nodeFilterElement = this.nodeFilterElement = elementWithId(toolbarElement, nodeFilterId)
     nodeFilterElement.placeholder = stringFilterPlaceholder
     nodeFilterElement.title = stringFilterTooltip
     nodeFilterElement.addEventListener('input', (event) => {
@@ -35,7 +46,6 @@ export class FlattenView extends NodeView {
     this.hoveredNodeState.input(this.hoveredElementState)
 
     const renderer = this.renderer = new NodeListRenderer(this.causalDomain)
-    renderer.setNodeHeightPixels(18)
     const view = this // Because `this` in listener function will be set to HTML element object
     renderer.nodeClickListener = function (event) { view.onNodeClick(this, event) }
     renderer.nodeMouseEnterListener = function (event) { view.onNodeMouseEnter(this, event) }
@@ -43,6 +53,9 @@ export class FlattenView extends NodeView {
     renderer.nodeMouseMoveListener = function (event) { view.onNodeMouseMove(this, event) }
     renderer.nodeElementFunction = (element) => { this.nodeElement(element) }
     renderer.nodeContentFunction = (element, node, initial) => { this.nodeContent(element, node, initial) }
+    renderer.setNodeHeightPixels(18)
+    renderer.element.style.flex = '1 0 0%'
+    element.appendChild(renderer.element)
 
     this.nodesStatsState = new State('FlattenView::NodesStats', (state) => { this.updateNodesStats(state) })
     this.nodesStatsState.input(renderer.nodesState)
@@ -71,9 +84,9 @@ export class FlattenView extends NodeView {
 
     this.state.input(renderer.pageState)
     this.state.input(this.tooltipPositionState)
-    renderer.element.style.width = '100%'
-    renderer.element.style.height = '100%'
-    this.nodesElement.appendChild(renderer.element)
+  }
+  setResized () {
+    this.renderer.elementSize.invalidate()
   }
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
