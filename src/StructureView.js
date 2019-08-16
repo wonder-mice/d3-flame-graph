@@ -2,23 +2,42 @@ import {State} from './State'
 import {nodeIndexNodes, createNodeNameIndex} from './NodeIndex'
 import {NodeLayout} from './NodeLayout'
 import {NodeRenderer} from './NodeRenderer'
-import {NodeView} from './NodeView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
 import {EnvironmentState} from './EnvironmentState'
+import {ElementSize} from './ElementSize'
 import {NodeHighlightClass, NodeHighlight} from './NodeHighlight'
 
-export class StructureViewOptions {
-  constructor () {
-    this.causalDomain = null
-  }
-}
-
-export class StructureView extends NodeView {
-  constructor (model, options) {
-    super(options && options.causalDomain)
-    const causalDomain = this.causalDomain
+export class StructureView {
+  constructor (model, causalDomain) {
+    this.state = new State('StructureView::State')
+    this.causalDomain = causalDomain || this.state
     this.model = model
+
+    const element = this.element = document.createElement('div')
+    element.className = 'fg-structure'
+    element.style.display = 'flex'
+    element.style.flexDirection = 'column'
+
+    const toolbarElement = this.toolbarElement = element.appendChild(document.createElement('div'))
+    toolbarElement.className = 'fg-toolbar'
+    toolbarElement.style.display = 'flex'
+    toolbarElement.style.flexDirection = 'row'
+    toolbarElement.style.flexGrow = '0'
+    toolbarElement.innerHTML = (
+`<div style="flex: 1 0"></div>
+<div style="flex: 0 1; display:flex; flex-direction: row; flex-basis: 25%">
+  <input type="text" style="flex: 1 0" class="fg-input fg-input-mono" value="https://github.com/wonder-mice/zf_log.git">
+  <button type="button" class="fg-btn fg-btn-sm">Search</button>
+  <button type="button" class="fg-btn fg-btn-sm">Clear</button>
+</div>`)
+
+    const nodesElement = this.nodesElement = element.appendChild(document.createElement('div'))
+    nodesElement.className = 'fg-nodetree'
+    nodesElement.style.position = 'relative'
+    nodesElement.style.overflow = 'hidden'
+    nodesElement.style.flex = '1 0 0%'
+    this.nodesElementSize = new ElementSize(this.nodesElement, this.causalDomain)
 
     this.rootIndexState = new State('StructureView::RootIndex', (state) => { this.updateRootIndex(state) })
     this.rootIndexState.input(model.structureState)
@@ -68,7 +87,7 @@ export class StructureView extends NodeView {
     this.tooltipNodeState = new State('StructureView::TooltipNode', (state) => { this.updateTooltipNode(state) })
     this.tooltipNodeState.input(this.hoveredNodeState)
     const tooltipView = this.tooltipView = new TooltipView(document.body)
-    const tooltipContentView = this.tooltipContentView = new NodeTooltipView(tooltipView.element, causalDomain)
+    const tooltipContentView = this.tooltipContentView = new NodeTooltipView(tooltipView.element, this.causalDomain)
     tooltipContentView.contentState.input(this.tooltipNodeState)
     this.tooltipPositionState = new State('StructureView::TooltipPosition', (state) => { this.updateTooltipPosition(state) })
     this.tooltipPositionState.input(this.tooltipContentView.contentState)
@@ -85,6 +104,9 @@ export class StructureView extends NodeView {
   setFocusedNode (node) {
     this.focusedNode = node
     this.focusedNodeState.invalidate()
+  }
+  setResized () {
+    this.nodesElementSize.invalidate()
   }
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
