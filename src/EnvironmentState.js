@@ -8,6 +8,8 @@ export function generateElementId (tag) {
 }
 
 export function elementWithId (container, id) {
+  // Can't use `document.getElementById(id)` because `container` is not necessary
+  // added to the `document` yet, while `querySelector()` works for any element.
   return container.querySelector('#' + id)
 }
 
