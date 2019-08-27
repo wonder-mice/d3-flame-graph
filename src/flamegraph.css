@@ -249,7 +249,7 @@
   border-bottom: 0px;
 }
 
-.fg-node, .fg-node-sm {
+.fg-node {
   position: absolute;
   overflow: hidden;
   box-sizing: border-box;
@@ -257,15 +257,13 @@
   top: 0;
   height: 18px;
   border: 1px solid white;
+  padding: 0 4px 0 4px;
 
   transition-property: left, top, width;
   transition-duration: 200ms;
   transition-timing-function: ease-out;
   will-change: left, top, width;
-}
 
-.fg-node {
-  padding: 0 4px 0 4px;
   white-space: nowrap;
   font-size: 12px;
   font-family: Verdana;
@@ -276,7 +274,11 @@
   color: black;
 }
 
-.fg-node:hover, .fg-node-sm:hover {
+.fg-tiny {
+  padding: 0;
+}
+
+.fg-node:hover {
   border: 1px solid black;
   /* cursor: pointer; */
 }
@@ -328,13 +330,13 @@
 }
 
 /* Node has a descendant that is not visible but should be highlighted (e.g. too small). */
-.fg-hv8 {
+.fg-hv2 {
   border: 1px solid #7B42B1;
   box-shadow: inset 0 -2px #7B42B1;
 }
 
 /* Node is highlighted AND has a descendant that is not visible but should be highlighted. */
-.fg-hv9 {
+.fg-hv3 {
   border: 1px solid #0751B9;
   box-shadow: inset 0 2px #0751B9;
   box-shadow: inset 0 -2px #7B42B1;
