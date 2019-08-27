@@ -1,4 +1,4 @@
-import {nodeMarked, nodeDescendantMarked} from './Node'
+import {nodeFlagMarked, nodeDescendantMarked} from './Node'
 import {NodeHighlightClass} from './NodeHighlight'
 
 export function markingPredicate (term) {
@@ -103,7 +103,7 @@ export function markedNodesAggregate (rootNodes, traits) {
     for (i = nodes.length; i--;) {
       node = nodes[i]
       mark = node.mark
-      if (mark & nodeMarked) {
+      if (mark & nodeFlagMarked) {
         if (aggregate) {
           traitsAddAggregateItem.call(traits, aggregate, node.item)
         } else {
