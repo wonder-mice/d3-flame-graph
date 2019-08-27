@@ -1,4 +1,5 @@
-import {NodeContext} from './Node'
+import {NodeContext, nodeMaskFocus} from './Node'
+import {nodeFlagFocused, nodeFlagDescendantFocused} from './NodeTreeRenderer'
 
 // FIXME: Maybe merge it with NodeLayout
 export class NodeLayoutResult {
@@ -38,7 +39,7 @@ export class NodeLayout {
       node.x = 0
       node.y = totalHeight
       node.mark &= 0b0111
-      node.bits = (node.bits & 0b11111100) | (0 === i ? 0b11 : 0b10)
+      node.flags = (node.flags & ~nodeMaskFocus) | (i ? nodeFlagDescendantFocused : nodeFlagFocused)
       node.rev = revision
       nodes.push(node)
       totalHeight += rowHeight
@@ -83,7 +84,7 @@ export class NodeLayout {
           }
         }
         child.mark &= 0b0111
-        child.bits &= 0b11111100
+        child.flags &= ~nodeMaskFocus
         child.rev = revision
         nodes.push(child)
       }
