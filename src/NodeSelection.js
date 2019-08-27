@@ -16,7 +16,7 @@ function selectionForEach (nodes, flag, callback) {
 
 function selectionAllEqual (children, bits) {
   for (let i = children.length; i--;) {
-    if (bits !== (children[i].selected & selectionMask)) {
+    if (bits !== (children[i].flags & selectionMask)) {
       return false
     }
   }
@@ -25,24 +25,24 @@ function selectionAllEqual (children, bits) {
 
 function selectionSyncAncestors (node) {
   for (let parent = node.parent; parent; parent = parent.parent) {
-    const selectedBits = parent.selected & selectionMask
+    const selectedBits = parent.flags & selectionMask
     const terminatorBits = selectedBits | nodeFlagSelectionTerminator
     if (selectionAllEqual(parent.children, terminatorBits)) {
       if (selectedBits === terminatorBits) {
         break
       }
-      parent.selected |= nodeFlagSelectionTerminator
+      parent.flags |= nodeFlagSelectionTerminator
     } else {
       if (selectedBits !== terminatorBits) {
         break
       }
-      parent.selected &= ~nodeFlagSelectionTerminator
+      parent.flags &= ~nodeFlagSelectionTerminator
     }
   }
 }
 
 function selectionUpdateNode (node, flag) {
-  const selected = node.selected
+  const selected = node.flags
   if (flag === (selected & nodeFlagSelected)) {
     return false
   }
@@ -51,12 +51,12 @@ function selectionUpdateNode (node, flag) {
   if (children && !selectionAllEqual(children, bits)) {
     bits &= ~nodeFlagSelectionTerminator
   }
-  node.selected = (selected & ~selectionMask) | bits
+  node.flags = (selected & ~selectionMask) | bits
   return true
 }
 
 function selectionUpdateSubtree (node, nodeFlag, descendantsFlag) {
-  const selected = node.selected
+  const selected = node.flags
   const selectedBits = selected & selectionMask
   const children = node.children
   const leaf = !children || !children.length
@@ -67,20 +67,20 @@ function selectionUpdateSubtree (node, nodeFlag, descendantsFlag) {
     if (nodeBits === selectedBits) {
       return false
     }
-    node.selected = (selected & ~selectionMask) | nodeBits
+    node.flags = (selected & ~selectionMask) | nodeBits
   } else if (nodeBits !== selectedBits) {
-    node.selected = (selected & ~selectionMask) | nodeBits
+    node.flags = (selected & ~selectionMask) | nodeBits
   } else {
     changed = false
   }
   if (!leaf) {
     const descendantBits = descendantsFlag | nodeFlagSelectionTerminator
     nodeTraverse([children], (descendant) => {
-      const selected = descendant.selected
+      const selected = descendant.flags
       if (descendantBits === (selected & selectionMask)) {
         return false
       }
-      descendant.selected = (selected & ~selectionMask) | descendantBits
+      descendant.flags = (selected & ~selectionMask) | descendantBits
       changed = true
       return true
     })
@@ -90,7 +90,7 @@ function selectionUpdateSubtree (node, nodeFlag, descendantsFlag) {
 
 function selectionUpdateAncestors (node, siblingsFlag, ancestorsFlag) {
   let parentFlag = ancestorsFlag | nodeFlagSelectionTerminator
-  if (parentFlag !== (node.selected & selectionMask)) {
+  if (parentFlag !== (node.flags & selectionMask)) {
     parentFlag = ancestorsFlag
   }
   let changed = false
@@ -108,9 +108,9 @@ function selectionUpdateAncestors (node, siblingsFlag, ancestorsFlag) {
         parentFlag = ancestorsFlag
       }
     }
-    const selected = parent.selected
+    const selected = parent.flags
     if (parentFlag !== (selected & selectionMask)) {
-      parent.selected = (selected & ~selectionMask) | parentFlag
+      parent.flags = (selected & ~selectionMask) | parentFlag
       changed = true
     }
   }
@@ -121,7 +121,7 @@ export function selectionReset (roots, flag) {
   if (roots) {
     const bits = flag | nodeFlagSelectionTerminator
     nodeTraverse([roots], (node) => {
-      node.selected = (node.selected & ~selectionMask) | bits
+      node.flags = (node.flags & ~selectionMask) | bits
       return true
     })
   }
@@ -378,7 +378,7 @@ export class NodeSelectionStructureTraits extends StructureTraits {
         for (;;) {
           for (let i = children.length; i--;) {
             const child = children[i]
-            const selected = child.selected
+            const selected = child.flags
             if (selected & nodeFlagSelected) {
               queue[k] = child
               levels[k] = childrenLevel
@@ -409,7 +409,7 @@ export class NodeSelectionStructureTraits extends StructureTraits {
       if (children) {
         for (let i = children.length; i--;) {
           const child = children[i]
-          const selected = child.selected
+          const selected = child.flags
           if (selected & nodeFlagSelected) {
             result.push(child)
             // } else if (selected & nodeFlagDescendantSelected) {
@@ -428,7 +428,7 @@ export class NodeSelectionStructureTraits extends StructureTraits {
       const nodes = queue[k]
       for (let i = nodes.length; i--;) {
         const node = nodes[i]
-        const selected = node.selected
+        const selected = node.flags
         if (selected & nodeFlagSelected) {
           result.push(node)
           // } else if (selected & nodeFlagDescendantSelected && node.children) {
