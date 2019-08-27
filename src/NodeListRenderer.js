@@ -55,7 +55,6 @@ export class NodeListRenderer {
     this.pageStateNodeContentInput = this.pageState.input(this.nodeContentState)
     this.pageState.input(this.viewportState)
 
-    this.nodes = null
     this.filteredNodes = null
     this.nodeWidthSpec = null
     this.nodeHeightSpec = null
@@ -102,24 +101,17 @@ export class NodeListRenderer {
     const nodes = this.nodes
     const filterPredicate = this.filterPredicate
     if (nodes && filterPredicate) {
-      const filteredNodes = []
-      for (let i = 0, n = nodes.length; i < n; ++i) {
-        const node = nodes[i]
-        if (filterPredicate(node)) {
-          filteredNodes.push(node)
-        }
-      }
-      this.filteredNodes = filteredNodes
+      this.filteredNodes = nodes.filter(filterPredicate)
     } else {
       this.filteredNodes = nodes
     }
   }
-  updateCommonStyle (state) {
-    this.nodeWidthSpec = this.elementSize.width + 'px'
-  }
   updateNodeHeight (state) {
     const nodeHeightPixels = this.nodeHeightPixels
     this.nodeHeightSpec = null === nodeHeightPixels ? (nodeHeightPixels + 'px') : '1.5em'
+  }
+  updateCommonStyle (state) {
+    this.nodeWidthSpec = this.elementSize.width + 'px'
   }
   updateLayout (state) {
     const nodeHeightPixels = this.nodeHeightPixels
