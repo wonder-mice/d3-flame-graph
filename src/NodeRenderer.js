@@ -62,7 +62,7 @@ function setNodeContent (node, context) {
   if (focus) { classes += nodeFocusHighlightClass.getClass(focus) }
   const mark = node.mark & 0b1001
   if (mark) { classes += nodeMarkHighlightClass.getClass(mark) }
-  if (!(node.selected & nodeFlagSelected)) { classes += ' fg-nsel' }
+  if (!(node.flags & nodeFlagSelected)) { classes += ' fg-nsel' }
   this.className = classes
   this.textContent = small ? '' : node.name
 }
@@ -92,7 +92,7 @@ export class NodeRenderer {
   }
   render (layout) {
     let nodes, i, node, element
-    const revision = layout.revision
+    const revision = this.revision
     const unusedElements = this.unusedElements
     if ((nodes = this.nodes) && revision !== this.revision) {
       // Hide currently visible elements that don't have their node in `layout`.
@@ -143,7 +143,7 @@ export class NodeRenderer {
     for (let i = nodes.length; i--;) {
       const node = nodes[i]
       if (revision === node.rev) {
-        node.element.classList.toggle('fg-nsel', !(node.selected & nodeFlagSelected))
+        node.element.classList.toggle('fg-nsel', !(node.flags & nodeFlagSelected))
       }
     }
   }
