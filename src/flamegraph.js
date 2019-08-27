@@ -1,5 +1,4 @@
 import {nodeFlagMarked, nodeDescendantMarked} from './Node'
-import {NodeHighlightClass} from './NodeHighlight'
 
 export function markingPredicate (term) {
   if (!term) {
@@ -119,19 +118,6 @@ export function markedNodesAggregate (rootNodes, traits) {
     }
   }
   return aggregate
-}
-
-export class NodeStyle {
-  constructor () {
-    // FIXME: It's bad that postfix ' ' must be specified here. Makes more sense for whoever calls `getIndex()` to specify this.
-    this.focusHighlightClass = new NodeHighlightClass('fg-fc', ' ')
-    this.markHighlightClass = new NodeHighlightClass('fg-mk', ' ')
-    this.hoverHighlightClass = new NodeHighlightClass('fg-hv')
-    this.selectionHighlightClass = new NodeHighlightClass('fg-sl')
-    this.smallWidth = 35
-    this.baseClass = 'fg-node'
-    this.baseClassSmall = 'fg-node-sm'
-  }
 }
 
 /*
