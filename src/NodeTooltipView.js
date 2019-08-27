@@ -213,9 +213,9 @@ export class NodeTooltipView {
   updateContent (state) {
     const node = this.node
     if (node) {
-      this.header.innerText = node.name
+      this.header.textContent = node.name
       // FIXME: Do we need it?
-      // this.buttonSelectionToggleNode.innerText = node.selected & nodeFlagSelected ? '-Σ¹' : '+Σ¹'
+      // this.buttonSelectionToggleNode.textContent = node.flags & nodeFlagSelected ? '-Σ¹' : '+Σ¹'
       const contentCallback = this.contentCallback
       if (contentCallback) {
         contentCallback(this, node)
