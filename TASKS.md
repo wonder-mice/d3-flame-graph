@@ -1,5 +1,15 @@
 # Tasks
 
+- [ ] How not to loose hover state because we don't have source of truth for it. And the one source of truth we do have is outside of node tree.
+- [ ] Small appearance changes need to be able to specify list of impacted nodes, so we don't need to go through all of them
+- [ ] Who and when should set nodeFlagTiny flag?
+- [ ] Layout should set flag on nodes that have hidden descendants. This in combination with marks should give enough information about marking hightligh.
+- [ ] Need to invalidate nodeContentState when delta changes, since layout is not neccessary in this case.
+- [ ] StructureView needs to know stem nodes
+- [ ] Implement special style for small nodes in structure view
+- [ ] Implement selection and highlight support for nodes in structure view
+- [ ] Remove redundant width/height:100% in deckpage splitview left/right
+- [ ] Clicking on flatten node does strange thing
 - [ ] When DeckPage is removed need to call clean up handlers to remove listeners
 - [ ] Review elements hierarchy in FlattenView
 - [x] Chrome / Safari 100% height issues (check FireFox as well)
