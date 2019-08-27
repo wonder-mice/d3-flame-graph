@@ -193,7 +193,7 @@ export class FlattenView {
   }
   nodeContent (element, node, initial) {
     if (initial) {
-      element.innerText = node.name
+      element.textContent = node.name
     }
     const prcnt = (Math.abs(node.total) / this.nodesMaxValue * 100) + '%'
     const color = deltaColor(node.delta, this.maxDelta)
