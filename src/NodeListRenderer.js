@@ -195,7 +195,7 @@ export class NodeListRenderer {
         element = this.createElement(node)
         nodeContentFunction(element, node, true)
         element.style.top = (i * nodeHeightPixels) + 'px'
-        element.style.display = 'block'
+        element.style.display = ''
       }
     }
     // Recycle elements from nodes that were in `pageNodes` list before, but now are not.

@@ -135,7 +135,7 @@ export class NodeRenderer {
       element.style.backgroundColor = nodeColor(node, context)
       element.title = nodeTitle ? nodeTitle(node, context) : ''
       nodeContent.call(element, node, context)
-      element.style.display = 'block'
+      element.style.display = ''
     }
   }
   updateSelection (nodes) {
