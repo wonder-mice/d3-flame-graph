@@ -1,16 +1,20 @@
 import {State} from './State'
+import {EnvironmentState} from './EnvironmentState'
+import {deltaColor, nameColor} from './Color'
+import {
+  nodeRootPath, nodeWalk,
+  nodeFlagTiny, nodeFlagSelected, nodeFlagHighlighted, nodeMaskFocus, nodeMaskMark,
+  nodeMaskFocusShift, nodeMaskMarkShift, nodeMaskHighlight, nodeFlagHiddenDescendantHighlighted, nodeMaskHighlightShift
+} from './Node'
 import {nodeIndexNodes, createNodeNameIndex} from './NodeIndex'
-import {NodeLayout} from './NodeLayout'
-import {NodeRenderer} from './NodeRenderer'
+import {NodeHighlightClass} from './NodeHighlight'
+import {NodeTreeRenderer} from './NodeTreeRenderer'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
-import {EnvironmentState} from './EnvironmentState'
-import {ElementSize} from './ElementSize'
-import {NodeHighlightClass, NodeHighlight} from './NodeHighlight'
 
 export class StructureView {
   constructor (model, causalDomain) {
-    this.state = new State('StructureView::State')
+    this.state = new State('StructureView:State')
     this.causalDomain = causalDomain || this.state
     this.model = model
 

@@ -1,6 +1,6 @@
 import {State} from './State'
 import {stringFilterPlaceholder, stringFilterTooltip, stringFilterPredicate} from './StringFilter'
-import {deltaColor} from './NodeRenderer'
+import {deltaColor} from './Color'
 import {NodeListRenderer} from './NodeListRenderer'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
