@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Why parents of hidden HLed nodes are not HLed?
 - [ ] When clicking in flatten tree, just set selection to subtrees.
 - [ ] Ensure updateTooltipPosition is as high/late in hierarchy as possible.
 - [ ] How not to loose hover state because we don't have source of truth for it. And the one source of truth we do have is outside of node tree.
