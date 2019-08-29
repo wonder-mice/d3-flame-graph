@@ -98,6 +98,7 @@ export class StructureView {
     renderer.layoutState.input(model.orderState)
     this.pageStateNodeTinyInput = renderer.pageState.input(this.nodeTinyState)
     this.pageStateNodeColorInput = renderer.pageState.input(this.nodeColorState)
+    this.pageFlags = 0
 
     this.hoveredElement = null
     this.hoveredElementEvent = null
@@ -323,8 +324,8 @@ export class StructureView {
   }
   pagePrepare (appearanceOnly) {
     if (!appearanceOnly) {
-      this.nodeContentFlags = (this.pageStateNodeTinyInput.changed ? pageFlagNodeTinyChanged : 0) |
-                              (this.pageStateNodeColorInput.changed ? pageFlagNodeColorChanged : 0)
+      this.pageFlags = (this.pageStateNodeTinyInput.changed ? pageFlagNodeTinyChanged : 0) |
+                       (this.pageStateNodeColorInput.changed ? pageFlagNodeColorChanged : 0)
     }
   }
 }

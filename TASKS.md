@@ -1,6 +1,6 @@
 # Tasks
 
-- [ ] When clicking on tiny node it remains tiny even while focused.
+- [x] When clicking on tiny node it remains tiny even while focused.
 - [x] Marks bitmask doesn't work
 - [ ] Long node names make very wide tool tips - how to limit their width reasonable?
 - [ ] updateHoverHighlight() is a mess
