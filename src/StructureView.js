@@ -66,10 +66,13 @@ export class StructureView {
     renderer.element.style.flex = '1 0 0%'
     element.appendChild(renderer.element)
 
-    this.structureState = new State('StructureView:Structure', (state) => { this.updateStructure(state) })
-    this.structureState.input(model.structureState)
-    renderer.rootNodeState.input(this.structureState)
-    renderer.focusNodeState.input(this.structureState)
+    this.rootNodeState = new State('StructureView:RootNode', (state) => { this.updateRootNode(state) })
+    this.rootNodeState.input(model.structureState)
+    renderer.rootNodeState.input(this.rootNodeState)
+
+    this.focusNodeState = new State('StructureView:FocusNode', (state) => { this.updateFocusNode(state) })
+    this.focusNodeState.input(this.rootNodeState)
+    renderer.focusNodeState.input(this.focusNodeState)
 
     this.focusStatsState = new State('StructureView:FocusStats', (state) => { this.updateFocusStats(state) })
     this.focusStatsState.input(renderer.focusNodeState)
@@ -127,9 +130,12 @@ export class StructureView {
     this.state.input(renderer.pageState)
     this.state.input(this.tooltipPositionState)
   }
-  setFocusedNode (node) {
-    this.focusedNode = node
-    this.focusedNodeState.invalidate()
+  setFocusNode (node) {
+    this.renderer.setFocusNode(node)
+    this.focusNodeState.invalidate()
+  }
+  get focusNode () {
+    return this.renderer.focusNode
   }
   setResized () {
     this.renderer.elementSize.invalidate()
@@ -163,6 +169,18 @@ export class StructureView {
     const model = this.model
     this.rootIndex = createNodeNameIndex([model.rootNode], model.costTraits)
   }
+  updateRootNode (state) {
+    this.renderer.setRootNode(this.model.rootNode)
+  }
+  updateFocusNode (state) {
+    const renderer = this.renderer
+    const focusNode = renderer.focusNode
+    if (focusNode) {
+      const focusPath = []
+      const rootNode = renderer.rootNode
+      if (rootNode !== nodeRootPath(focusNode, focusPath)) {
+        renderer.setFocusNode(focusPath.length ? nodeWalk(rootNode, focusPath) : null)
+      }
     }
   }
   updateFocusStats (state) {

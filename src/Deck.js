@@ -1,7 +1,6 @@
 import {State} from './State'
 import {TabView} from './TabView'
 import {DeckPage} from './DeckPage'
-import {nodeRootPath, nodeWalk} from './Node'
 import {NodeSelectionStructureTraits} from './NodeSelection'
 import {generateElementId, elementWithId} from './EnvironmentState'
 
@@ -143,17 +142,7 @@ export class Deck {
     page.setValueTraits(sourceModel.valueTraits)
     page.setOrderFunction(sourceModel.orderFunction)
     page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
-
-    const sourcePrimaryFocusedNode = sourcePage.primaryView.focusedNode
-    if (sourcePrimaryFocusedNode) {
-      const path = []
-      nodeRootPath(sourcePrimaryFocusedNode, path)
-      if (path.length) {
-        // This is not the most conventional way to do it, but it was an interesting experiment to try.
-        page.primaryModel.structureState.update()
-        page.primaryView.setFocusedNode(nodeWalk(page.primaryModel.rootNode, path))
-      }
-    }
+    page.primaryView.setFocusNode(sourcePage.primaryView.focusNode)
     page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
 
     const item = this.newItem(page)
