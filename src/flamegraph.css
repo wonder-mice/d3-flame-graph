@@ -311,32 +311,32 @@
 }
 
 /* Node has a marked descendant that is not visible (e.g. too small). */
-.fg-mk8 {
+.fg-mk2 {
   border: 1px solid #7B42B1;
   box-shadow: inset 0 -2px #7B42B1;
 }
 
 /* Node is marked AND has a marked descendant that is not visible. */
-.fg-mk9 {
+.fg-mk3 {
   border: 1px solid #0751B9;
   box-shadow: inset 0 2px #0751B9;
   box-shadow: inset 0 -2px #7B42B1;
 }
 
 /* Node is highlighted. */
-.fg-hv1 {
+.fg-hl1 {
   border: 1px solid #0751B9;
   box-shadow: inset 0 2px #0751B9;
 }
 
 /* Node has a descendant that is not visible but should be highlighted (e.g. too small). */
-.fg-hv2 {
+.fg-hl2 {
   border: 1px solid #7B42B1;
   box-shadow: inset 0 -2px #7B42B1;
 }
 
 /* Node is highlighted AND has a descendant that is not visible but should be highlighted. */
-.fg-hv3 {
+.fg-hl3 {
   border: 1px solid #0751B9;
   box-shadow: inset 0 2px #0751B9;
   box-shadow: inset 0 -2px #7B42B1;

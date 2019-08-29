@@ -6,21 +6,6 @@ import {
   nodeMaskHighlight
 } from './Node'
 
-/*
-class PageStateAppearanceTraits extends StateInputTraits {
-  static send (input, value) {
-    const accumulator = input.value
-    if (accumulator) {
-      for (let x = accumulator.length, y = 0, n = value.length; y < n; ++x, ++y) {
-        accumulator[x] = value[y]
-      }
-    } else {
-      input.value = value.slice()
-    }
-  }
-}
-*/
-
 function positionNode (style, node) {
   style.width = node.width + 'px'
   style.left = node.x + 'px'
@@ -39,6 +24,7 @@ export class NodeTreeRenderer {
     this.nodeMouseMoveListener = null
     this.nodeElementFunction = null
     this.nodeContentFunction = null
+    this.pagePrepareFunction = null
     this.nodeAppearanceFunction = null
 
     this.rootNodeState = new State('NodeTreeRenderer:RootNode')
@@ -51,12 +37,12 @@ export class NodeTreeRenderer {
     this.layoutState = new State('NodeTreeRenderer:Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(this.rootNodeState)
     this.layoutState.input(this.focusNodeState)
-    this.appearanceState = new State('NodeTreeRenderer:Appearance')
+    this.nodeAppearanceState = new State('NodeTreeRenderer:NodeAppearance')
     this.pageState = new State('NodeTreeRenderer:Page', (state) => { this.updatePage(state) })
     this.pageStateNodeContentInput = this.pageState.input(this.nodeContentState)
     this.pageStateCommonStyleInput = this.pageState.input(this.commonStyleState)
     this.pageStateLayoutInput = this.pageState.input(this.layoutState)
-    this.pageStateAppearanceInput = this.pageState.input(this.appearanceState)
+    this.pageStateNodeAppearanceInput = this.pageState.input(this.nodeAppearanceState)
 
     const element = this.element = document.createElement('div')
     element.className = 'fg-nodetree'
@@ -122,7 +108,7 @@ export class NodeTreeRenderer {
       this.appearanceNodes.length = 0
       this.appearanceNodeCount = -1
     }
-    this.appearanceState.invalidate()
+    this.nodeAppearanceState.invalidate()
   }
   updateCommonStyle (state) {
     this.nodeHeightSpec = this.nodeHeightPixels + 'px'
@@ -206,56 +192,58 @@ export class NodeTreeRenderer {
     this.layoutNodes = layoutNodes
     layoutNodes.length = layoutNodeCount
   }
-  updatePageAppearance (state) {
-    // It's an optimization for cases when only node appearance changes. It can be any
-    // changes that preserve layout. Note, that `nodeContentFunction()` must do things
-    // that `nodeAppearanceFunction()` does in cases when layout changes (when layout
-    // changes `nodeAppearanceFunction()` function will not be called).
-    const nodeAppearanceFunction = this.nodeAppearanceFunction
-    if (!nodeAppearanceFunction) {
-      return
-    }
-    const pageNodes = this.pageNodes
-    const pageNodeCount = pageNodes.length
-    const appearanceNodeCount = this.appearanceNodeCount
-    // Due to suboptimal design, it's possible to add the same node more than once to
-    // `appearanceNodes` list. If this list is too big, than it's simpler to just
-    // update all `pageNodes`, where each node is known to present only once. Also
-    // if `appearanceNodeCount` is `0`, than it indicates that full appearance
-    // update (all nodes in `pageNodes`) was requested explicitly.
-    if (appearanceNodeCount < 0 || pageNodeCount <= appearanceNodeCount) {
-      for (let i = pageNodeCount; i--;) {
-        const node = pageNodes[i]
-        nodeAppearanceFunction(node.element, node)
-      }
-    } else {
-      const appearanceNodes = this.appearanceNodes
-      for (let k = appearanceNodes.length; k--;) {
-        const nodes = appearanceNodes[k]
-        for (let i = nodes.length; i--;) {
-          const node = nodes[i]
-          nodeAppearanceFunction(node.element, node)
-        }
-      }
-    }
-  }
   updatePage (state) {
     const nodeContentChanged = this.pageStateNodeContentInput.changed
     const commonStyleChanged = this.pageStateCommonStyleInput.changed
     const layoutChanged = this.pageStateLayoutInput.changed
-    const appearanceChanged = this.pageStateAppearanceInput.changed
+    const nodeAppearanceChanged = this.pageStateNodeAppearanceInput.changed
+    const substanceChanged = commonStyleChanged || nodeContentChanged || layoutChanged
     const pageNodes = this.pageNodes
-    if (layoutChanged) {
-      // Hide currently visible elements that don't have their node in `layout`.
-      const revision = this.layoutRevision
-      for (let i = pageNodes.length; i--;) {
-        const node = pageNodes[i]
-        if (revision !== node.rev) {
-          this.recycleElement(node)
+    const pagePrepareFunction = this.pagePrepareFunction
+    if (pagePrepareFunction) {
+      const appearanceOnly = nodeAppearanceChanged && !substanceChanged
+      pagePrepareFunction(appearanceOnly)
+    }
+    if (substanceChanged) {
+      if (layoutChanged) {
+        // Hide currently visible elements that don't have their node in `layout`.
+        const revision = this.layoutRevision
+        for (let i = pageNodes.length; i--;) {
+          const node = pageNodes[i]
+          if (revision !== node.rev) {
+            this.recycleElement(node)
+          }
         }
       }
-    }
-    if (appearanceChanged && !layoutChanged && !commonStyleChanged && !nodeContentChanged) {
+      const layoutNodes = this.layoutNodes
+      const layoutNodeCount = layoutNodes.length
+      const setNodeContentFunction = this.nodeContentFunction
+      const updateNodeContentFunction = nodeContentChanged || nodeAppearanceChanged ? setNodeContentFunction : null
+      pageNodes.length = layoutNodeCount
+      for (let i = 0; i < layoutNodeCount; ++i) {
+        const node = pageNodes[i] = layoutNodes[i]
+        let element = node.element
+        if (element) {
+          if (layoutChanged) {
+            positionNode(element.style, node)
+          }
+          if (commonStyleChanged) {
+            this.applyCommonStyle(element)
+          }
+          if (updateNodeContentFunction) {
+            updateNodeContentFunction(element, node, false)
+          }
+        } else {
+          element = this.createElement(node)
+          const style = element.style
+          positionNode(style, node)
+          if (setNodeContentFunction) {
+            setNodeContentFunction(element, node, true)
+          }
+          style.display = ''
+        }
+      }
+    } else if (nodeAppearanceChanged) {
       // It's an optimization for cases when only node appearance changes. It can be any
       // changes that preserve layout. Note, that `nodeContentFunction()` must do things
       // that `nodeAppearanceFunction()` does in cases when layout changes (when layout
@@ -285,34 +273,8 @@ export class NodeTreeRenderer {
           }
         }
       }
-    } else {
-      const layoutNodes = this.layoutNodes
-      const layoutNodeCount = layoutNodes.length
-      const nodeContentFunction = this.nodeContentFunction || ((element, node, initial) => {})
-      pageNodes.length = layoutNodeCount
-      for (let i = 0; i < layoutNodeCount; ++i) {
-        const node = pageNodes[i] = layoutNodes[i]
-        let element = node.element
-        if (element) {
-          if (layoutChanged) {
-            positionNode(element.style, node)
-          }
-          if (commonStyleChanged) {
-            this.applyCommonStyle(element)
-          }
-          if (nodeContentChanged) {
-            nodeContentFunction(element, node, false)
-          }
-        } else {
-          element = this.createElement(node)
-          nodeContentFunction(element, node, true)
-          const style = element.style
-          positionNode(style, node)
-          style.display = ''
-        }
-      }
     }
-    if (appearanceChanged) {
+    if (nodeAppearanceChanged) {
       this.appearanceNodes.length = 0
       this.appearanceNodeCount = 0
     }

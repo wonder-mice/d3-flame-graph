@@ -121,11 +121,6 @@ export function markedNodesAggregate (rootNodes, traits) {
 }
 
 /*
-const nodeHoverHighlightClass = new NodeHighlightClass('fg-hv')
-const nodeSelectionHighlightClass = new NodeHighlightClass('fg-sl')
-*/
-
-/*
 export function flamegraph () {
   const nodeHoverHighlight = new NodeHighlight(nodeHoverHighlightClass)
   const nodeSelectionHighlight = new NodeHighlight(nodeSelectionHighlightClass)

@@ -5,11 +5,11 @@ import {StructureTraits} from './Item'
 // node is marked or not. Also marking structure allows to tell whether any specifc node has
 // descendants or ancestors that are marked, but it doesn't allow to tell whether any specific
 // node has descendants or ancestors that are NOT marked.
-export const nodeFlagMarked = 0b001 // node is marked
-export const nodeFlagDescendantMarked = 0b010 // node has a descendant that is marked
-export const nodeFlagAncestorMarked = 0b100 // node has an ancestor that is marked
-export const nodeMaskMark = 0b111
-export const nodeMaskMarkShift = 0
+export const nodeFlagAncestorMarked = 0b0001 // node has an ancestor that is marked
+export const nodeFlagDescendantMarked = 0b0010 // node has a descendant that is marked
+export const nodeFlagMarked = 0b0100 // node is marked
+export const nodeFlagHiddenDescendantMarked = 0b1000 // nodes has marked descendant that are not visible (e.g. too small).
+export const nodeFlagMarkedShift = 2
 
 // Used with `Node.flags` to support node selection. Selection is different from marking in that
 // it is optimized for selecting and unselecting specific set of nodes (i.e. list of nodes is known
@@ -22,19 +22,16 @@ export const nodeMaskMarkShift = 0
 // flags set, then the entire subtree is selected. And if node only has `nodeFlagSelectionTerminator`
 // flag set, then the entire subtree is not selected. For leaf nodes `nodeFlagSelectionTerminator`
 // should always be set.
-export const nodeFlagSelected = 0b1000
-export const nodeFlagSelectionTerminator = 0b10000
-export const nodeMaskSelection = 0b11000
-export const nodeMaskSelectionShift = 3
+export const nodeFlagSelected = 0b10000
+export const nodeFlagSelectionTerminator = 0b100000
+export const nodeMaskSelection = 0b110000
+export const nodeMaskSelectionShift = 4
 
 // Used with `Node.flags` to indicate nodes that provide context for other nodes.
-export const nodeFlagFocused = 0b1100000 // node is focused
-export const nodeFlagDescendantFocused = 0b1000000 // node is on the path from focused node to the root
-export const nodeMaskFocus = 0b1100000
-export const nodeMaskFocusShift = 5
-
-// Used with `Node.flags` to indicate nodes that have marked descendants that are not visible (e.g. too small).
-export const nodeFlagHiddenDescendantMarked = 0b10000000
+export const nodeFlagFocused = 0b11000000 // node is focused
+export const nodeFlagDescendantFocused = 0b10000000 // node is on the path from focused node to the root
+export const nodeMaskFocus = 0b11000000
+export const nodeMaskFocusShift = 6
 
 // Used with `Node.flags` to indicate small nodes. Small nodes can be rendered differently not to
 // include as much of a content, because it'll be not visible anyway.

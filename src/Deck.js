@@ -125,7 +125,7 @@ export class Deck {
     item.tabTitleState.input(page.primaryModel.structureState)
     item.tabTitleState.action = (state) => {
       const rootNode = item.page.primaryModel.rootNode
-      item.tabTitleElement.innerText = rootNode ? rootNode.name : '(Empty)'
+      item.tabTitleElement.textContent = rootNode ? rootNode.name : '(Empty)'
     }
     return item
   }
@@ -157,7 +157,7 @@ export class Deck {
     page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
 
     const item = this.newItem(page)
-    item.tabTitleElement.innerText = rootName || 'Aggregation #' + (++this.aggregationNo)
+    item.tabTitleElement.textContent = rootName || 'Aggregation #' + (++this.aggregationNo)
     item.tabButtonElement.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/>'
     item.tabButtonElement.onclick = (event) => {
       event.stopPropagation()
