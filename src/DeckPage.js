@@ -49,22 +49,20 @@ export class DeckPage {
 
     this.primaryHighlightMirrorsSecondary = false
     this.primaryHoverHighlightStateSecondaryHoveredNodeInput = primaryView.hoverHighlightState.input(secondaryView.hoveredNodeState)
-    primaryView.hoverHighlightDelegate = (state) => {
-      const primaryView = this.primaryView
-      const primaryHoveredNode = primaryView.hoveredNode
+    primaryView.hoverHighlightDelegate = (hoveredNode, hoveredNodeChanged) => {
       const secondaryHoveredNode = this.secondaryView.hoveredNode
-      if (primaryView.hoverHighlightStateHoveredNodeInput.changed && primaryHoveredNode) {
+      if (hoveredNodeChanged && hoveredNode) {
         this.primaryHighlightMirrorsSecondary = false
       } else if (this.primaryHoverHighlightStateSecondaryHoveredNodeInput.changed && secondaryHoveredNode) {
         this.primaryHighlightMirrorsSecondary = true
       }
       let highlightNodes = null
-      if (secondaryHoveredNode && (this.primaryHighlightMirrorsSecondary || !primaryHoveredNode)) {
+      if (secondaryHoveredNode && (this.primaryHighlightMirrorsSecondary || !hoveredNode)) {
         highlightNodes = secondaryHoveredNode.roots
-      } else if (primaryHoveredNode) {
-        highlightNodes = nodeIndexNodes(primaryView.rootIndex, primaryHoveredNode.name)
+      } else if (hoveredNode) {
+        highlightNodes = nodeIndexNodes(this.primaryView.rootIndex, hoveredNode.name)
       }
-      primaryView.hoverHighlightNodes = highlightNodes
+      return highlightNodes
     }
 
     this.secondaryStructureState = new State('DeckPage::SecondaryStructure', (state) => {

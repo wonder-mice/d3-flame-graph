@@ -164,7 +164,6 @@ export class StructureView {
 
     this.hoverHighlight = new NodeHighlight(renderer)
     this.hoverHighlightDelegate = null
-    this.hoverHighlightNodes = null
     this.hoverHighlightState = new State('StructureView:HoverHighlight', (state) => { this.updateHoverHighlight(state) })
     this.hoverHighlightStateLayoutInput = this.hoverHighlightState.input(renderer.layoutState)
     this.hoverHighlightStateHoveredNodeInput = this.hoverHighlightState.input(this.hoveredNodeState)
@@ -280,15 +279,15 @@ export class StructureView {
     state.cancel()
   }
   updateHoverHighlight (state) {
+    let highlightedNodes = null
+    const hoveredNode = this.hoveredNode
     const hoverHighlightDelegate = this.hoverHighlightDelegate
     if (hoverHighlightDelegate) {
-      // Delegate must set `this.hoverHighlightNodes` to list of nodes to be highlighted (or null).
-      hoverHighlightDelegate(state)
-    } else {
-      const hoveredNode = this.hoveredNode
-      this.hoverHighlightNodes = hoveredNode ? nodeIndexNodes(this.rootIndex, hoveredNode.name) : null
+      highlightedNodes = hoverHighlightDelegate(hoveredNode, this.hoverHighlightStateHoveredNodeInput.changed)
+    } else if (hoveredNode) {
+      highlightedNodes = nodeIndexNodes(this.rootIndex, hoveredNode.name)
     }
-    this.hoverHighlight.update(this.hoverHighlightNodes, this.hoverHighlightStateLayoutInput.changed)
+    this.hoverHighlight.update(highlightedNodes, this.hoverHighlightStateLayoutInput.changed)
   }
   updateTooltipNode (state) {
     const hoveredNode = this.hoveredNode
