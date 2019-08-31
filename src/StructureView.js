@@ -23,6 +23,59 @@ const nodeHighlightClasses = ['', ' fg-hl1', ' fg-hl2', ' fg-hl3']
 
 const nodeTinyWidthPixels = 35
 
+class NodeHighlight {
+  constructor (renderer) {
+    this.renderer = renderer
+    this.highlightedNodes = null
+  }
+  update (nodes, layoutChanged) {
+    // If `layoutChanged`, then all nodes in current layout have flags in
+    // `nodeMaskHighlight` set to 0 (because layout clears them).
+    const renderer = this.renderer
+    if (!layoutChanged) {
+      const highlightedNodes = this.highlightedNodes
+      if (highlightedNodes) {
+        for (let i = highlightedNodes.length; i--;) {
+          highlightedNodes[i].flags &= ~nodeMaskHighlight
+        }
+        renderer.setAppearanceChanged(highlightedNodes)
+      }
+    }
+    this.highlightedNodes = null
+    if (!nodes) {
+      return
+    }
+    // Hightlight each node or its first visible ancestor.
+    const revision = renderer.layoutRevision
+    const highlightedNodes = []
+    let highlightedNodeCount = 0
+    nextNode:
+    for (let i = nodes.length; i--;) {
+      let node = nodes[i]
+      let highlightFlag = nodeFlagHighlighted
+      if (revision !== node.rev) {
+        do {
+          if (!(node = node.parent)) {
+            continue nextNode
+          }
+        } while (revision !== node.rev)
+        highlightFlag = nodeFlagHiddenDescendantHighlighted
+      }
+      const flags = node.flags
+      node.flags = flags | highlightFlag
+      if (!(flags & nodeMaskHighlight)) {
+        highlightedNodes[highlightedNodeCount++] = node
+      }
+    }
+    if (highlightedNodeCount) {
+      this.highlightedNodes = highlightedNodes
+      if (!layoutChanged) {
+        renderer.setAppearanceChanged(highlightedNodes)
+      }
+    }
+  }
+}
+
 export class StructureView {
   constructor (model, causalDomain) {
     this.state = new State('StructureView:State')
@@ -109,9 +162,9 @@ export class StructureView {
     this.hoveredNodeStateStructureInput = this.hoveredNodeState.input(model.structureState)
     this.hoveredNodeState.input(this.hoveredElementState)
 
+    this.hoverHighlight = new NodeHighlight(renderer)
     this.hoverHighlightDelegate = null
     this.hoverHighlightNodes = null
-    this.hoverHighlightedNodes = null
     this.hoverHighlightState = new State('StructureView:HoverHighlight', (state) => { this.updateHoverHighlight(state) })
     this.hoverHighlightStateLayoutInput = this.hoverHighlightState.input(renderer.layoutState)
     this.hoverHighlightStateHoveredNodeInput = this.hoverHighlightState.input(this.hoveredNodeState)
@@ -208,12 +261,14 @@ export class StructureView {
     }
   }
   updateHoveredNode (state) {
-    // FIXME: Here we can check for revision to see whether node is still on screen.
     const hoveredNode = this.hoveredNode
     if (this.hoveredNodeStateStructureInput.changed) {
       this.hoveredNode = null
       return
     }
+    // If we want discard tooltip when node becomes invisible, here we
+    // can check for its revision to see whether it was included in layout.
+    // Will need to add dependency on layoutState for that though.
     if (!hoveredNode || !this.hoveredElementEvent.shiftKey) {
       const hoveredElement = this.hoveredElement
       const node = hoveredElement ? hoveredElement.__node__ : null
@@ -227,21 +282,13 @@ export class StructureView {
   updateHoverHighlight (state) {
     const hoverHighlightDelegate = this.hoverHighlightDelegate
     if (hoverHighlightDelegate) {
+      // Delegate must set `this.hoverHighlightNodes` to list of nodes to be highlighted (or null).
       hoverHighlightDelegate(state)
     } else {
       const hoveredNode = this.hoveredNode
       this.hoverHighlightNodes = hoveredNode ? nodeIndexNodes(this.rootIndex, hoveredNode.name) : null
     }
-    // const nodes = nodeIndexNodes(this.rootIndex, this.hoverHighlightName)
-    this.hoverHighlight.update(this.hoverHighlightNodes, this.revision, true)
-    // This is just a small optimization that allows to avoid calling action on
-    // downstream states in cases where only highlight changed. Those mentioned
-    // downstream states are usually just aggregators and don't have actions
-    // associated with them, so benefits of this optimization shouldn't be
-    // anything noticible. However, in desire to test drive different state
-    // based programming patterns I added this "optimization" here to see what
-    // possible goods and bads it can cause.
-    state.cancel()
+    this.hoverHighlight.update(this.hoverHighlightNodes, this.hoverHighlightStateLayoutInput.changed)
   }
   updateTooltipNode (state) {
     const hoveredNode = this.hoveredNode

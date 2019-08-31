@@ -1,9 +1,10 @@
 # Tasks
 
+- [x] hoverHighlightedNodes is a bad name (differs only by `ed` suffix).
+- [x] updateHoverHighlight() is a mess
 - [x] When clicking on tiny node it remains tiny even while focused.
 - [x] Marks bitmask doesn't work
 - [ ] Long node names make very wide tool tips - how to limit their width reasonable?
-- [ ] updateHoverHighlight() is a mess
 - [ ] Integrate Terset to compute constants and get some other optimizations
 - [ ] In StructureView certain states, like maxDeltaChanged are handled incorrectly
 - [x] Why parents of hidden HLed nodes are not HLed?

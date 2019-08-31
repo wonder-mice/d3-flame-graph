@@ -8,6 +8,7 @@
     "extends": ["standard"],
 	"rules": {
 		 "yoda": "off",
+		 "no-labels": "off",
 		 "indent": ["error", 2, { "ignoredNodes": ["TemplateLiteral"] }]
     }
 }
