@@ -1,5 +1,6 @@
 # Tasks
 
+- [x] Selection doesn't update correctly. When appearance changes, it's not clear whether list of changed nodes is complete or appearance was changed via other inputs too.
 - [x] hoverHighlightedNodes is a bad name (differs only by `ed` suffix).
 - [x] updateHoverHighlight() is a mess
 - [x] When clicking on tiny node it remains tiny even while focused.

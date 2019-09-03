@@ -144,6 +144,7 @@ export class StructureView {
     this.nodeColorState.input(model.valueState)
 
     renderer.nodeAppearanceState.input(renderer.focusNodeState)
+    renderer.nodeAppearanceState.input(model.selectionState)
     renderer.nodeContentState.input(this.focusStatsState)
     renderer.nodeContentState.input(this.layoutStatsState)
     renderer.nodeContentState.input(model.valueState)
@@ -168,7 +169,7 @@ export class StructureView {
     this.hoverHighlightStateLayoutInput = this.hoverHighlightState.input(renderer.layoutState)
     this.hoverHighlightStateHoveredNodeInput = this.hoverHighlightState.input(this.hoveredNodeState)
     this.hoverHighlightState.input(this.rootIndexState)
-    renderer.nodeAppearanceState.input(this.hoverHighlightState)
+    renderer.nodeAppearanceChangeState.input(this.hoverHighlightState)
 
     this.tooltipNodeState = new State('StructureView:TooltipNode', (state) => { this.updateTooltipNode(state) })
     this.tooltipNodeState.input(this.hoveredNodeState)

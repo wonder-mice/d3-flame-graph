@@ -37,12 +37,21 @@ export class NodeTreeRenderer {
     this.layoutState = new State('NodeTreeRenderer:Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(this.rootNodeState)
     this.layoutState.input(this.focusNodeState)
+    // Users can add inputs to `nodeAppearanceChangeState` to signal changes in appearance. This
+    // state implies that appearance for all nodes changed. If appearance changes for known subset
+    // of nodes, consider using `nodeAppearanceChangeState` with `setAppearanceChanged()` call to
+    // avoid updating nodes for which appearance didn't change.
     this.nodeAppearanceState = new State('NodeTreeRenderer:NodeAppearance')
+    // Users can add inputs to `nodeAppearanceChangeState` to signal changes in appearance. However,
+    // it's REQUIRED to call `setAppearanceChanged()` with a list of nodes for which appearance
+    // changed (or `null` to signal that appearance changed for all nodes).
+    this.nodeAppearanceChangeState = new State('NodeTreeRenderer:NodeAppearanceChange', (state) => { this.updateNodeAppearanceChange(state) })
+    this.nodeAppearanceChangeStateNodeAppearanceInput = this.nodeAppearanceChangeState.input(this.nodeAppearanceState)
     this.pageState = new State('NodeTreeRenderer:Page', (state) => { this.updatePage(state) })
     this.pageStateNodeContentInput = this.pageState.input(this.nodeContentState)
     this.pageStateCommonStyleInput = this.pageState.input(this.commonStyleState)
     this.pageStateLayoutInput = this.pageState.input(this.layoutState)
-    this.pageStateNodeAppearanceInput = this.pageState.input(this.nodeAppearanceState)
+    this.pageStateNodeAppearanceChangeInput = this.pageState.input(this.nodeAppearanceChangeState)
 
     const element = this.element = document.createElement('div')
     element.className = 'fg-nodetree'
@@ -108,7 +117,7 @@ export class NodeTreeRenderer {
       this.appearanceNodes.length = 0
       this.appearanceNodeCount = -1
     }
-    this.nodeAppearanceState.invalidate()
+    this.nodeAppearanceChangeState.invalidate()
   }
   updateCommonStyle (state) {
     this.nodeHeightSpec = this.nodeHeightPixels + 'px'
@@ -192,11 +201,19 @@ export class NodeTreeRenderer {
     this.layoutNodes = layoutNodes
     layoutNodes.length = layoutNodeCount
   }
+  updateNodeAppearanceChange (state) {
+    if (this.nodeAppearanceChangeStateNodeAppearanceInput.changed) {
+      this.appearanceNodes.length = 0
+      this.appearanceNodeCount = -1
+    } else if (0 === this.appearanceNodeCount) {
+      state.cancel()
+    }
+  }
   updatePage (state) {
     const nodeContentChanged = this.pageStateNodeContentInput.changed
     const commonStyleChanged = this.pageStateCommonStyleInput.changed
     const layoutChanged = this.pageStateLayoutInput.changed
-    const nodeAppearanceChanged = this.pageStateNodeAppearanceInput.changed
+    const nodeAppearanceChanged = this.pageStateNodeAppearanceChangeInput.changed
     const substanceChanged = commonStyleChanged || nodeContentChanged || layoutChanged
     const pageNodes = this.pageNodes
     const pagePrepareFunction = this.pagePrepareFunction
