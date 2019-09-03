@@ -11,6 +11,7 @@ export class FlattenView {
     this.state = new State('FlattenView::State')
     this.causalDomain = causalDomain || this.state
     this.model = model
+    this.nodeClickListener = null
 
     const element = this.element = document.createElement('div')
     element.className = 'fg-flatten'
@@ -91,8 +92,15 @@ export class FlattenView {
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
       const node = element.__node__
-      this.model.setStructureNode(node)
-      this.causalDomain.update()
+      const listener = this.nodeClickListener
+      if (listener) {
+        listener(node)
+      } else {
+        // Keeping this branch to remember how this method worked before.
+        // But current idea is that `nodeClickListener` should always be set.
+        this.model.setStructureNode(node)
+        this.causalDomain.update()
+      }
     }
   }
   onNodeMouseEnter (element, event) {
@@ -195,7 +203,9 @@ export class FlattenView {
     if (initial) {
       element.textContent = node.name
     }
+    // FIXME: gradient shoud use absolute values
     const prcnt = (Math.abs(node.total) / this.nodesMaxValue * 100) + '%'
+    // FIXME: color should use name color when no delta available
     const color = deltaColor(node.delta, this.maxDelta)
     element.style.background = `linear-gradient(to right, ${color} ${prcnt}, #fff ${prcnt})`
   }
