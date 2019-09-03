@@ -5,10 +5,9 @@
 - [x] updateHoverHighlight() is a mess
 - [x] When clicking on tiny node it remains tiny even while focused.
 - [x] Marks bitmask doesn't work
-- [ ] Long node names make very wide tool tips - how to limit their width reasonable?
-- [ ] Integrate Terset to compute constants and get some other optimizations
-- [ ] In StructureView certain states, like maxDeltaChanged are handled incorrectly
+- [x] [Layout] Computed height is incorrect (off by 1)
 - [x] Why parents of hidden HLed nodes are not HLed?
+- [x] In StructureView certain states, like maxDeltaChanged are handled incorrectly
 - [ ] When clicking in flatten tree, just set selection to subtrees.
 - [ ] Ensure updateTooltipPosition is as high/late in hierarchy as possible.
 - [ ] How not to loose hover state because we don't have source of truth for it. And the one source of truth we do have is outside of node tree.
@@ -34,8 +33,8 @@
 - [ ] Use string table for node names
 - [ ] Name tab "Selection" only when not everything is selected
 - [ ] Don't add fake "All" node in ardiff python
+- [ ] Integrate `Terser` npm to compute constants and get some other optimizations
 - [ ] Collapse recursion
-- [ ] [Layout] Computed height is incorrect (off by 1)
 - [ ] [NTBF] Don't use 70% as initial split view proportions, since it results in fractional sizes
 
 # Notes
