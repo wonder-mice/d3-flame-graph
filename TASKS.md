@@ -1,5 +1,11 @@
 # Tasks
 
+- [ ] When DeckPage is removed need to call clean up handlers to remove listeners
+- [ ] When clicking in flatten tree, open roots of clicked node in new tab.
+- [ ] Looks like we are leaking tooltip hosting elements, since adding tabs add more of them, but after closing tabs tooltip hosting elements don't go away.
+- [ ] When disconnecting states subtree need to be careful, because this subtree will no be able to react on mouseUp events if it was disconncted in mouseDown handler.
+- [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
+- [x] Clicking on flatten node does strange thing
 - [x] Selection doesn't update correctly. When appearance changes, it's not clear whether list of changed nodes is complete or appearance was changed via other inputs too.
 - [x] hoverHighlightedNodes is a bad name (differs only by `ed` suffix).
 - [x] updateHoverHighlight() is a mess
@@ -8,23 +14,20 @@
 - [x] [Layout] Computed height is incorrect (off by 1)
 - [x] Why parents of hidden HLed nodes are not HLed?
 - [x] In StructureView certain states, like maxDeltaChanged are handled incorrectly
-- [ ] When clicking in flatten tree, just set selection to subtrees.
 - [ ] Ensure updateTooltipPosition is as high/late in hierarchy as possible.
-- [ ] How not to loose hover state because we don't have source of truth for it. And the one source of truth we do have is outside of node tree.
-- [ ] Small appearance changes need to be able to specify list of impacted nodes, so we don't need to go through all of them
-- [ ] Who and when should set nodeFlagTiny flag?
-- [ ] Layout should set flag on nodes that have hidden descendants. This in combination with marks should give enough information about marking hightligh.
+- [x] How not to loose hover state because we don't have source of truth for it. And the one source of truth we do have is outside of node tree.
+- [x] Small appearance changes need to be able to specify list of impacted nodes, so we don't need to go through all of them
+- [x] Who and when should set nodeFlagTiny flag?
+- [x] Layout should set flag on nodes that have hidden descendants. This in combination with marks should give enough information about marking hightligh.
 - [ ] Need to invalidate nodeContentState when delta changes, since layout is not neccessary in this case.
-- [ ] StructureView needs to know stem nodes
-- [ ] Implement special style for small nodes in structure view
-- [ ] Implement selection and highlight support for nodes in structure view
+- [x] StructureView needs to know stem nodes
+- [x] Implement special style for small nodes in structure view
+- [x] Implement selection and highlight support for nodes in structure view
 - [ ] Remove redundant width/height:100% in deckpage splitview left/right
-- [ ] Clicking on flatten node does strange thing
-- [ ] When DeckPage is removed need to call clean up handlers to remove listeners
 - [ ] Review elements hierarchy in FlattenView
 - [x] Chrome / Safari 100% height issues (check FireFox as well)
 - [ ] Compare boot args
-- [ ] Implement all selection buttons
+- [x] Implement all selection buttons
 - [ ] Deck must have an option for setting minimum node width
 - [ ] Implement clipboard copy
 - [ ] Implement search
