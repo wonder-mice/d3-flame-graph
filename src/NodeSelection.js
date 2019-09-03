@@ -383,7 +383,6 @@ export class NodeSelectionStructureTraits extends StructureTraits {
               queue[k] = child
               levels[k] = childrenLevel
               ++k
-              // } else if (selected & nodeFlagDescendantSelected) {
             } else if (!(selected & nodeFlagSelectionTerminator)) {
               const grandChildren = child.children
               if (grandChildren) {
@@ -412,7 +411,6 @@ export class NodeSelectionStructureTraits extends StructureTraits {
           const selected = child.flags
           if (selected & nodeFlagSelected) {
             result.push(child)
-            // } else if (selected & nodeFlagDescendantSelected) {
           } else if (!(selected & nodeFlagSelectionTerminator)) {
             queue[k++] = child
           }
@@ -431,7 +429,6 @@ export class NodeSelectionStructureTraits extends StructureTraits {
         const selected = node.flags
         if (selected & nodeFlagSelected) {
           result.push(node)
-          // } else if (selected & nodeFlagDescendantSelected && node.children) {
         } else if (!(selected & nodeFlagSelectionTerminator) && node.children) {
           queue[k++] = node.children
         }
@@ -451,24 +448,3 @@ export class NodeSelectionStructureTraits extends StructureTraits {
     return 1 === names.size ? nodes[0].name : ambiguousName
   }
 }
-
-/*
-export class NodeSelection {
-  constructor () {
-    this.nodes = null
-    this.index = null
-  }
-  update (nodes, costTraits) {
-    if (nodes && nodes.length) {
-      this.nodes = nodes
-      this.index = createNodeNameIndex(nodes, costTraits)
-    } else {
-      this.reset()
-    }
-  }
-  reset () {
-    this.nodes = null
-    this.index = null
-  }
-}
-*/
