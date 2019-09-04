@@ -2,7 +2,7 @@
 
 - [ ] When DeckPage is removed need to call clean up handlers to remove listeners
 - [ ] When clicking in flatten tree, open roots of clicked node in new tab.
-- [ ] Looks like we are leaking tooltip hosting elements, since adding tabs add more of them, but after closing tabs tooltip hosting elements don't go away.
+- [ ] Leaking tooltip hosting elements, since adding tabs add more of them, but after closing tabs tooltip hosting elements don't go away.
 - [ ] When disconnecting states subtree need to be careful, because this subtree will no be able to react on mouseUp events if it was disconncted in mouseDown handler.
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
 - [x] Clicking on flatten node does strange thing
