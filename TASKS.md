@@ -8,8 +8,6 @@
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
 - [ ] Deck must have an option for setting minimum node width
 - [ ] Set node cursor to arrow (default) or pointer, shouldn't be selectable
-- [x] Review elements hierarchy in FlattenView
-- [x] Remove redundant width/height:100% in deckpage splitview left/right
 - [ ] Use string table for node names
 - [ ] Compare boot args
 - [ ] Integrate `Terser` npm to compute constants and get some other optimizations
