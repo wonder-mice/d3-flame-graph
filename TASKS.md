@@ -1,7 +1,5 @@
 # Tasks
 
-- [x] When clicking in flatten tree, open roots of clicked node in new tab.
-- [x] When disconnecting states subtree need to be careful, because this subtree will no be able to react on mouseUp events if it was disconncted in mouseDown handler.
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
 - [ ] Remove redundant width/height:100% in deckpage splitview left/right
 - [ ] Review elements hierarchy in FlattenView
