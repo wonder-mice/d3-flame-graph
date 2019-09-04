@@ -20,18 +20,12 @@ export class DeckPage {
 
     const splitView = this.splitView = new SplitView(element)
     splitView.element.style.flex = '1 0'
-    const primaryElement = this.primaryElement = splitView.left.appendChild(document.createElement('div'))
-    primaryElement.style.width = '100%'
-    primaryElement.style.height = '100%'
-    const secondaryElement = this.secondaryElement = splitView.right.appendChild(document.createElement('div'))
-    secondaryElement.style.width = '100%'
-    secondaryElement.style.height = '100%'
 
     const primaryModel = this.primaryModel = new StructureModel()
     const primarySelection = this.primarySelection = new NodeSelection(primaryModel)
     const primaryView = this.primaryView = new StructureView(primaryModel, causalDomain)
     primaryView.tooltipContentView.setSelectionInterface(primarySelection)
-    primaryElement.appendChild(primaryView.element)
+    splitView.left.appendChild(primaryView.element)
     primaryView.element.style.width = '100%'
     primaryView.element.style.height = '100%'
     state.input(primaryView.state)
@@ -40,7 +34,7 @@ export class DeckPage {
     secondaryModel.setStructureTraits(NodeStructureTraits)
     const secondaryView = this.secondaryView = new FlattenView(secondaryModel, causalDomain)
     secondaryView.tooltipContentView.setSelectionInterface(new FlattenNodeSelection(primarySelection))
-    secondaryElement.appendChild(secondaryView.element)
+    splitView.right.appendChild(secondaryView.element)
     secondaryView.element.style.width = '100%'
     secondaryView.element.style.height = '100%'
     state.input(secondaryView.state)

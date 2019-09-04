@@ -1,13 +1,13 @@
 # Tasks
 
+- [ ] Implement search
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
-- [ ] Remove redundant width/height:100% in deckpage splitview left/right
+
 - [ ] Review elements hierarchy in FlattenView
 - [ ] Compare boot args
 - [ ] Ensure updateTooltipPosition is as high/late in hierarchy as possible.
 - [ ] Deck must have an option for setting minimum node width
 - [ ] Implement clipboard copy
-- [ ] Implement search
 - [ ] Implement state saves
 - [ ] Set node cursor to arrow (default) or pointer, shouldn't be selectable
 - [ ] Use string table for node names
@@ -15,6 +15,7 @@
 - [ ] Don't add fake "All" node in ardiff python
 - [ ] Integrate `Terser` npm to compute constants and get some other optimizations
 - [ ] Collapse recursion
+- [x] Remove redundant width/height:100% in deckpage splitview left/right
 - [ ] [NTBF] Don't use 70% as initial split view proportions, since it results in fractional sizes
 - [ ] [NTBF] Need to invalidate nodeContentState when delta changes, since layout is not neccessary in this case.
 
