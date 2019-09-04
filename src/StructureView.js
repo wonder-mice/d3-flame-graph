@@ -184,6 +184,10 @@ export class StructureView {
     this.state.input(renderer.pageState)
     this.state.input(this.tooltipPositionState)
   }
+  discard () {
+    this.renderer.discard()
+    document.body.removeChild(this.tooltipView.element)
+  }
   setFocusNode (node) {
     this.renderer.setFocusNode(node)
     this.focusNodeState.invalidate()

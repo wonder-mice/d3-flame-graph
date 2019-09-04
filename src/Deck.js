@@ -193,10 +193,12 @@ export class Deck {
         this.setActiveItem(null)
       }
     }
-    this.state.remove(item.input)
-    this.element.removeChild(item.page.element)
-    this.tabView.removeTab(item.tab)
     items.splice(index, 1)
+    this.state.remove(item.input)
+    this.tabView.removeTab(item.tab)
+    const page = item.page
+    this.element.removeChild(page.element)
+    page.discard()
     this.causalDomain.update()
   }
   onItemTabClick (item) {

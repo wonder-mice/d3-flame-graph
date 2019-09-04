@@ -1,10 +1,10 @@
 # Tasks
 
-- [ ] When DeckPage is removed need to call clean up handlers to remove listeners
 - [ ] When clicking in flatten tree, open roots of clicked node in new tab.
-- [ ] Leaking tooltip hosting elements, since adding tabs add more of them, but after closing tabs tooltip hosting elements don't go away.
 - [ ] When disconnecting states subtree need to be careful, because this subtree will no be able to react on mouseUp events if it was disconncted in mouseDown handler.
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
+- [x] When DeckPage is removed need to call clean up handlers to remove listeners
+- [x] Leaking tooltip hosting elements, since adding tabs add more of them, but after closing tabs tooltip hosting elements don't go away.
 - [x] Clicking on flatten node does strange thing
 - [x] Selection doesn't update correctly. When appearance changes, it's not clear whether list of changed nodes is complete or appearance was changed via other inputs too.
 - [x] hoverHighlightedNodes is a bad name (differs only by `ed` suffix).
@@ -14,7 +14,6 @@
 - [x] [Layout] Computed height is incorrect (off by 1)
 - [x] Why parents of hidden HLed nodes are not HLed?
 - [x] In StructureView certain states, like maxDeltaChanged are handled incorrectly
-- [ ] Ensure updateTooltipPosition is as high/late in hierarchy as possible.
 - [x] How not to loose hover state because we don't have source of truth for it. And the one source of truth we do have is outside of node tree.
 - [x] Small appearance changes need to be able to specify list of impacted nodes, so we don't need to go through all of them
 - [x] Who and when should set nodeFlagTiny flag?
@@ -28,6 +27,7 @@
 - [x] Chrome / Safari 100% height issues (check FireFox as well)
 - [ ] Compare boot args
 - [x] Implement all selection buttons
+- [ ] Ensure updateTooltipPosition is as high/late in hierarchy as possible.
 - [ ] Deck must have an option for setting minimum node width
 - [ ] Implement clipboard copy
 - [ ] Implement search

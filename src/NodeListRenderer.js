@@ -81,6 +81,9 @@ export class NodeListRenderer {
     nodesElement.style.width = '100%'
     nodesElement.style.position = 'absolute'
   }
+  discard () {
+    this.elementSize.discard()
+  }
   setReversed (reversed) {
     this.reversed = reversed
     this.reversedState.invalidate()

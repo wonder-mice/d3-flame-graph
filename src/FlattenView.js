@@ -86,6 +86,10 @@ export class FlattenView {
     this.state.input(renderer.pageState)
     this.state.input(this.tooltipPositionState)
   }
+  discard () {
+    this.renderer.discard()
+    document.body.removeChild(this.tooltipView.element)
+  }
   setResized () {
     this.renderer.elementSize.invalidate()
   }

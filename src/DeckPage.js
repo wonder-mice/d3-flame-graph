@@ -97,6 +97,10 @@ export class DeckPage {
       parent.appendChild(element)
     }
   }
+  discard () {
+    this.primaryView.discard()
+    this.secondaryView.discard()
+  }
   setRootName (name) {
     this.primaryModel.setRootName(name)
   }

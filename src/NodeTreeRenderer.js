@@ -82,6 +82,9 @@ export class NodeTreeRenderer {
     this.pageNodes = []
     this.unusedElements = []
   }
+  discard () {
+    this.elementSize.discard()
+  }
   setNodeHeightPixels (height) {
     this.nodeHeightPixels = height
     this.nodeHeightState.invalidate()

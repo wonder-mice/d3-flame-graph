@@ -23,7 +23,7 @@ export class ElementSize {
   invalidate () {
     this.sizeState.invalidate()
   }
-  disconnect () {
+  discard () {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect()
     } else {
