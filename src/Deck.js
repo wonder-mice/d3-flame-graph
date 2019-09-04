@@ -17,7 +17,7 @@ class DeckItem {
     this.tabTitleElement = null
   }
   setActive (active) {
-    this.page.element.style.display = active ? 'flex' : 'none'
+    this.page.setHidden(!active)
     this.tab.setActive(active)
     if (active) {
       this.input.attach(this.state)
