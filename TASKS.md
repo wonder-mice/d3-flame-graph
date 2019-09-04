@@ -1,9 +1,8 @@
 # Tasks
 
-- [ ] When clicking in flatten tree, open roots of clicked node in new tab.
-- [ ] When disconnecting states subtree need to be careful, because this subtree will no be able to react on mouseUp events if it was disconncted in mouseDown handler.
+- [x] When clicking in flatten tree, open roots of clicked node in new tab.
+- [x] When disconnecting states subtree need to be careful, because this subtree will no be able to react on mouseUp events if it was disconncted in mouseDown handler.
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
-- [ ] Need to invalidate nodeContentState when delta changes, since layout is not neccessary in this case.
 - [ ] Remove redundant width/height:100% in deckpage splitview left/right
 - [ ] Review elements hierarchy in FlattenView
 - [ ] Compare boot args
@@ -19,6 +18,7 @@
 - [ ] Integrate `Terser` npm to compute constants and get some other optimizations
 - [ ] Collapse recursion
 - [ ] [NTBF] Don't use 70% as initial split view proportions, since it results in fractional sizes
+- [ ] [NTBF] Need to invalidate nodeContentState when delta changes, since layout is not neccessary in this case.
 
 # Notes
 

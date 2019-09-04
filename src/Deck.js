@@ -4,6 +4,10 @@ import {DeckPage} from './DeckPage'
 import {NodeSelectionStructureTraits} from './NodeSelection'
 import {generateElementId, elementWithId} from './EnvironmentState'
 
+const iconReload = '<path fill-rule="evenodd" fill="currentColor" d="M10.24 7.4a4.15 4.15 0 0 1-1.2 3.6 4.346 4.346 0 0 1-5.41.54L4.8 10.4.5 9.8l.6 4.2 1.31-1.26c2.36 1.74 5.7 1.57 7.84-.54a5.876 5.876 0 0 0 1.74-4.46l-1.75-.34zM2.96 5a4.346 4.346 0 0 1 5.41-.54L7.2 5.6l4.3.6-.6-4.2-1.31 1.26c-2.36-1.74-5.7-1.57-7.85.54C.5 5.03-.06 6.65.01 8.26l1.75.35A4.17 4.17 0 0 1 2.96 5z"/>'
+const iconClose = '<path fill-rule="evenodd" fill="currentColor" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/>'
+const iconPlus = '<path fill-rule="evenodd" fill="currentColor" d="M12 9H7v5H5V9H0V7h5V2h2v5h5v2z"/>'
+
 class DeckItem {
   constructor (tab, page, input) {
     this.tab = tab
@@ -48,10 +52,7 @@ export class Deck {
     plusTabElement.classList.add('fg-deck-tab')
     plusTabElement.addEventListener('click', (event) => { this.onPlusTabClick() })
     plusTabElement.title = 'Extract selected subtree.'
-    plusTabElement.innerHTML = (
-`<svg fill="currentColor" class="fg-deck-tab-plus" width="12" height="16" viewBox="0 0 12 16">
-  <path fill-rule="evenodd" d="M12 9H7v5H5V9H0V7h5V2h2v5h5v2z"/>
-</svg>`)
+    plusTabElement.innerHTML = `<svg fill="currentColor" class="fg-deck-tab-plus" width="12" height="16" viewBox="0 0 12 16">${iconPlus}</svg>`
 
     const masterItem = this.masterItem = this.newMasterItem()
     this.setActiveItem(masterItem)
@@ -96,6 +97,7 @@ export class Deck {
   newPage () {
     const page = new DeckPage(this.element, this.causalDomain)
     page.element.style.flex = '1 0'
+    page.secondaryView.nodeClickListener = (node) => { this.onFlattenNodeClick(node) }
     return page
   }
   newItem (page) {
@@ -116,7 +118,7 @@ export class Deck {
   newMasterItem () {
     const page = this.newPage()
     const item = this.newItem(page)
-    item.tabButtonElement.innerHTML = '<path fill-rule="evenodd" d="M10.24 7.4a4.15 4.15 0 0 1-1.2 3.6 4.346 4.346 0 0 1-5.41.54L4.8 10.4.5 9.8l.6 4.2 1.31-1.26c2.36 1.74 5.7 1.57 7.84-.54a5.876 5.876 0 0 0 1.74-4.46l-1.75-.34zM2.96 5a4.346 4.346 0 0 1 5.41-.54L7.2 5.6l4.3.6-.6-4.2-1.31 1.26c-2.36-1.74-5.7-1.57-7.85.54C.5 5.03-.06 6.65.01 8.26l1.75.35A4.17 4.17 0 0 1 2.96 5z"/>'
+    item.tabButtonElement.innerHTML = iconReload
     item.tabButtonElement.onclick = (event) => {
       event.stopPropagation()
       this.onItemTabReset(item)
@@ -125,6 +127,16 @@ export class Deck {
     item.tabTitleState.action = (state) => {
       const rootNode = item.page.primaryModel.rootNode
       item.tabTitleElement.textContent = rootNode ? rootNode.name : '(Empty)'
+    }
+    return item
+  }
+  newClosableItem (page, title) {
+    const item = this.newItem(page)
+    item.tabTitleElement.textContent = title
+    item.tabButtonElement.innerHTML = iconClose
+    item.tabButtonElement.onclick = (event) => {
+      event.stopPropagation()
+      this.onItemTabClose(item)
     }
     return item
   }
@@ -145,13 +157,25 @@ export class Deck {
     page.primaryView.setFocusNode(sourcePage.primaryView.focusNode)
     page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
 
-    const item = this.newItem(page)
-    item.tabTitleElement.textContent = rootName || 'Aggregation #' + (++this.aggregationNo)
-    item.tabButtonElement.innerHTML = '<path fill="currentColor" fill-rule="evenodd" d="M7.48 8l3.75 3.75-1.48 1.48L6 9.48l-3.75 3.75-1.48-1.48L4.52 8 .77 4.25l1.48-1.48L6 6.52l3.75-3.75 1.48 1.48L7.48 8z"/>'
-    item.tabButtonElement.onclick = (event) => {
-      event.stopPropagation()
-      this.onItemTabClose(item)
-    }
+    const title = rootName || 'Aggregation #' + (++this.aggregationNo)
+    const item = this.newClosableItem(page, title)
+    return item
+  }
+  newFlattenItem (sourceItem, node) {
+    const sourcePage = sourceItem.page
+    const sourceModel = sourcePage.primaryModel
+    const page = this.newPage()
+    const rootName = node.name
+    page.setRootName(rootName)
+    page.setStructureRoots(node.roots)
+    page.setStructureTraits(NodeSelectionStructureTraits)
+    page.setStructureCoalescing(true)
+    page.setCostTraits(sourceModel.costTraits)
+    page.setValueTraits(sourceModel.valueTraits)
+    page.setOrderFunction(sourceModel.orderFunction)
+    page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
+
+    const item = this.newClosableItem(page, rootName)
     return item
   }
   setActiveItem (item) {
@@ -165,6 +189,11 @@ export class Deck {
       }
       this.activeItem = item
     }
+  }
+  onFlattenNodeClick (node) {
+    const item = this.newFlattenItem(this.activeItem, node)
+    this.setActiveItem(item)
+    this.causalDomain.update()
   }
   onPlusTabClick () {
     const item = this.newSelectionItem(this.activeItem)
