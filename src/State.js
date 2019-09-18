@@ -1,7 +1,8 @@
 import { Metrics } from './Metrics'
-export const inputUnchanged = 0
-export const inputPending = 1
-export const inputChanged = 2
+
+const inputUnchanged = 0
+const inputPending = 1
+const inputChanged = 2
 
 // Sets status of each `pending` output input to `unchanged`. If state that owns
 // the input (consumer) now has all its inputs in `unchanged` status, repeat
