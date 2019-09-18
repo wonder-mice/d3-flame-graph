@@ -1,4 +1,4 @@
-import {State, StateInputTraits} from './State'
+import {State, StateInputTraits, StateInputPrimary} from './State'
 import {Callstack} from './Callstack'
 import {Node, nodeRootPath, nodeWalk} from './Node'
 
@@ -49,11 +49,11 @@ export class FlattenModel {
 
     this.valueState = new State('FlattenModel::Value', (state) => { this.updateValue(state) })
     this.valueState.input(this.valueTraitsState)
-    this.valueStateStructureInput = this.valueState.input(this.structureState, StructureStateAddedSiblingsTraits)
+    this.valueStateStructureInput = this.valueState.input(this.structureState, StateInputPrimary, StructureStateAddedSiblingsTraits)
 
     this.orderState = new State('FlattenModel::Order', (state) => { this.updateOrder(state) })
     this.orderState.input(this.orderFunctionState)
-    this.orderStateStructureInput = this.orderState.input(this.structureState, StructureStateAddedSiblingsTraits)
+    this.orderStateStructureInput = this.orderState.input(this.structureState, StateInputPrimary, StructureStateAddedSiblingsTraits)
   }
   setRootName (name) {
     this.rootName = name
