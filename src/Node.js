@@ -55,7 +55,6 @@ export class Node {
     this.name = name
     this.cost = cost
     this.flags = nodeFlagSelected | nodeFlagSelectionTerminator
-    // this.mark = 0
     // Short for `revision`. Value stored in this field is the same for all visible nodes, while not visible nodes
     // will have values different from the value that visible nodes have. This technique saves cycles on marking
     // nodes discarded by layout as invisible. Since usually there are more invisible nodes then visible, it gives
