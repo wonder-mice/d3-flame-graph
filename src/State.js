@@ -16,19 +16,23 @@ function outputSetClean (state) {
       const input = outputInputs[i]
       if (inputPending === input.status) {
         input.status = inputUnchanged
-        const state = input.consumer
-        if (!--state.inputsChanged) {
-          // There are two approaches to reset `outputInputsMarked`:
-          // 1. In `statesUpdate()` after state is picked from the queue
-          // 2. In `stateValidate()` AND everywhere state can become clean during update phase.
-          // Second approach will take state out of update graph as soon as first `send()` or
-          // `cancel()` was called (including cases when it was called by/from producer states
-          // as an optimization). This will make it impossible to make this state dirty again.
-          // But this will requre to find all places where state can become clean during update
-          // phase. Looks like this is the only one (except `stateValidate()` itself).
-          // Taking first approach for now, since it's simpler and more robust.
-          // state.outputInputsMarked = 0
-          queue[k++] = state.outputInputs
+        // Consumer needs to be considered for validation only if its `input` is primary,
+        // because secondary inputs don't invalidate consumers.
+        if (input.primary) {
+          const state = input.consumer
+          if (!--state.inputsChanged) {
+            // There are two approaches to reset `outputInputsMarked`:
+            // 1. In `statesUpdate()` after state is picked from the queue
+            // 2. In `stateValidate()` AND everywhere state can become clean during update phase.
+            // Second approach will take state out of update graph as soon as first `send()` or
+            // `cancel()` was called (including cases when it was called by/from producer states
+            // as an optimization). This will make it impossible to make this state dirty again.
+            // But this will requre to find all places where state can become clean during update
+            // phase. Looks like this is the only one (except `stateValidate()` itself).
+            // Taking first approach for now, since it's simpler and more robust.
+            // state.outputInputsMarked = 0
+            queue[k++] = state.outputInputs
+          }
         }
       }
     }
@@ -61,8 +65,10 @@ function outputSetDirty (state) {
           throw Error(`State that is not in update graph ("${input.producer.name}") can't be invalidated if it has consumers that are in update graph ("${consumer.name}").`)
         }
         input.status = inputPending
-        if (!consumer.inputsChanged++) {
-          queue[k++] = consumer.outputInputs
+        if (input.primary) {
+          if (!consumer.inputsChanged++) {
+            queue[k++] = consumer.outputInputs
+          }
         }
       }
     }
@@ -77,9 +83,11 @@ function outputSetDirty (state) {
 function inputSetClean (input) {
   if (inputUnchanged !== input.status) {
     input.status = inputUnchanged
-    const state = input.consumer
-    if (!--state.inputsChanged) {
-      outputSetClean(state)
+    if (input.primary) {
+      const state = input.consumer
+      if (!--state.inputsChanged) {
+        outputSetClean(state)
+      }
     }
   }
 }
@@ -90,7 +98,7 @@ function inputSetClean (input) {
 // for provided `input`) from `outputSetDirty()` in that it will always change
 // input's status to `changed`, even when it's current status is `pending`.
 function inputSetDirty (input) {
-  if (inputUnchanged === input.status) {
+  if (inputUnchanged === input.status && input.primary) {
     const state = input.consumer
     if (!state.inputsChanged++) {
       outputSetDirty(state)
@@ -304,6 +312,9 @@ export function statesPlot (states) {
       if (inputUnchanged !== status) {
         dot += ` [color=${inputChanged === status ? 'red' : 'orange'}]`
       }
+      if (!input.primary) {
+        dot += ` [style=dashed]`
+      }
       dot += '\n'
     }
     state.outputInputsMarked = 0
@@ -320,15 +331,19 @@ export class StateInputTraits {
   static detach (input) { this.reset(input) }
 }
 
+export const StateInputPrimary = 0
+export const StateInputSecondary = 1
+
 // `StateInput` is a mechanism `State` can use to get fine grained information
 // about why it was invalidated. `StateInput` is owned by exactly one `State`,
 // specified as `consumer` in `StateInput` constructor (required). It can be
 // connected (optional) to exactly one output state (`producer` constructor
 // parameter).
 export class StateInput {
-  constructor (consumer, producer, traits) {
+  constructor (consumer, producer, flags, traits) {
     this.consumer = consumer
     this.producer = producer
+    this.primary = !(flags & StateInputSecondary)
     this.traits = traits
     // Initial status values is a bit tricky. Obviosly, `inputUnchanged` will not work,
     // because then newly added states will not be collected during update. However,
@@ -389,10 +404,10 @@ export class State {
   }
   // Adds a new input and connects it to output of `producer` state (optional,
   // if not specified created input will not be connected to any state).
-  input (producer, traits) {
-    const input = new StateInput(this, producer, traits)
+  input (producer, flags, traits) {
+    const input = new StateInput(this, producer, flags, traits)
     this.inputs.push(input)
-    if (!this.inputsChanged++) {
+    if (input.primary && !this.inputsChanged++) {
       outputSetDirty(this)
     }
     if (producer) {
@@ -401,7 +416,7 @@ export class State {
     return input
   }
   remove (input) {
-    if (inputUnchanged !== input.status && !--this.inputsChanged) {
+    if (input.primary && inputUnchanged !== input.status && !--this.inputsChanged) {
       outputSetClean(this)
     }
     const inputs = this.inputs
