@@ -447,6 +447,13 @@ export class State {
   // `callback(value, output)`.
   // Must only be used
   send (value) {
+    // With introduction of secondary inputs (that don't invalidate consumers) it's
+    // possible to have `State.inputsChanged` set to `0` even when certain inputs
+    // are `changed` (or `pending`). Eventually `State.inputsChanged` must be modified
+    // to have following things  explicitly:
+    //   | # of changed secondary inputs | # of changed primary inputs | explicit invalidation flag |
+    // Note, that both `#` (count of) fields can be represented as a bit maks with a bit per input.
+    // Using bit mask representation opens up interesting possibilites.
     if (this.inputsChanged) {
       // FIXME: Here we can assert that producers of all (changed?) inputs must be clean already.
       stateValidate(this)
