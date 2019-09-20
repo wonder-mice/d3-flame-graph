@@ -1,7 +1,7 @@
 export const stringFilterPlaceholder = 'Filter: contains, /regexp or #equal match (!case sensitive)'
 export const stringFilterTooltip = 'Matches any string that has specified string as a substring (case insensitive, prefix with "!" for case sensitive match). When prefixed with "/", rest of the string is interpreted as a regular expression (case insensitive, prefix with "!" for case sensitive match). When prefixed with "#", matches any string that is equal to the rest of specified string.'
 
-export function stringFilterPredicate (term) {
+export function stringFilterPredicate (term, ignoreErrors) {
   if (!term) {
     return null
   }
@@ -32,7 +32,10 @@ export function stringFilterPredicate (term) {
         const re = new RegExp(regexp, caseSensitive ? '' : 'i')
         return function (s) { return re.test(s) }
       } catch (error) {
-        return null
+        if (ignoreErrors) {
+          return null
+        }
+        throw error
       }
     }
   }
