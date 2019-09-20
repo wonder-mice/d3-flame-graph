@@ -4,6 +4,7 @@ import {deltaColor} from './Color'
 import {NodeListRenderer} from './NodeListRenderer'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
+import {StateUpdater} from './StateUpdater'
 import {EnvironmentState, generateElementId, elementWithId} from './EnvironmentState'
 
 export class FlattenView {
@@ -31,18 +32,16 @@ export class FlattenView {
     nodeFilterElement.placeholder = stringFilterPlaceholder
     nodeFilterElement.title = stringFilterTooltip
     nodeFilterElement.addEventListener('input', (event) => {
-      const value = this.nodeFilterElement.value
-      const namePredicate = stringFilterPredicate(value)
-      this.renderer.setFilterPredicate(namePredicate ? (node) => { return namePredicate(node.name) } : null)
-      this.causalDomain.update()
+      this.setFilterExpression(this.nodeFilterElement.value)
+      StateUpdater.updater(this.causalDomain).update(250, 100)
     })
 
     this.hoveredElement = null
     this.hoveredElementEvent = null
-    this.hoveredElementState = new State('FlattenView::HoveredElement')
+    this.hoveredElementState = new State('FlattenView:HoveredElement')
 
     this.hoveredNode = null
-    this.hoveredNodeState = new State('FlattenView::HoveredNode', (state) => { this.updateHoveredNode(state) })
+    this.hoveredNodeState = new State('FlattenView:HoveredNode', (state) => { this.updateHoveredNode(state) })
     this.hoveredNodeStructureNodeInput = this.hoveredNodeState.input(model.structureNodeState)
     this.hoveredNodeState.input(this.hoveredElementState)
 
@@ -58,10 +57,12 @@ export class FlattenView {
     renderer.element.style.flex = '1 0 0%'
     element.appendChild(renderer.element)
 
-    this.nodesStatsState = new State('FlattenView::NodesStats', (state) => { this.updateNodesStats(state) })
+    this.nodesStatsState = new State('FlattenView:NodesStats', (state) => { this.updateNodesStats(state) })
     this.nodesStatsState.input(renderer.nodesState)
     this.nodesStatsState.input(model.valueState)
-    this.filteredStatsState = new State('FlattenView::FilteredStats', (state) => { this.updateFilteredStats(state) })
+    this.filterPredicateState = new State('FlattenView:FilterPredicate', (state) => { this.updateFilterPredicate(state) })
+    this.renderer.filterPredicateState.input(this.filterPredicateState)
+    this.filteredStatsState = new State('FlattenView:FilteredStats', (state) => { this.updateFilteredStats(state) })
     this.filteredStatsState.input(renderer.filteredNodesState)
     this.filteredStatsState.input(model.valueState)
     this.filteredStatsState.input(this.nodesStatsState)
@@ -73,12 +74,12 @@ export class FlattenView {
       renderer.setNodes(this.model.structureNode.children)
     }))
 
-    this.tooltipNodeState = new State('FlattenView::TooltipNode', (state) => { this.updateTooltipNode(state) })
+    this.tooltipNodeState = new State('FlattenView:TooltipNode', (state) => { this.updateTooltipNode(state) })
     this.tooltipNodeState.input(this.hoveredNodeState)
     const tooltipView = this.tooltipView = new TooltipView(document.body)
     const tooltipContentView = this.tooltipContentView = new NodeTooltipView(tooltipView.element, this.causalDomain)
     tooltipContentView.contentState.input(this.tooltipNodeState)
-    this.tooltipPositionState = new State('FlattenView::TooltipPosition', (state) => { this.updateTooltipPosition(state) })
+    this.tooltipPositionState = new State('FlattenView:TooltipPosition', (state) => { this.updateTooltipPosition(state) })
     this.tooltipPositionState.input(this.tooltipContentView.contentState)
     this.tooltipPositionState.input(this.hoveredElementState)
     this.tooltipPositionStateHoveredNodeInput = this.tooltipPositionState.input(this.hoveredNodeState)
@@ -92,6 +93,10 @@ export class FlattenView {
   }
   setResized () {
     this.renderer.elementSize.invalidate()
+  }
+  setFilterExpression (filterExpression) {
+    this.filterExpression = filterExpression
+    this.filterPredicateState.invalidate()
   }
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
@@ -178,6 +183,22 @@ export class FlattenView {
     }
     this.nodesMaxValue = maxValue
     this.nodesMaxDelta = maxDelta
+  }
+  updateFilterPredicate (state) {
+    let filterPredicate = null
+    try {
+      const namePredicate = stringFilterPredicate(this.filterExpression)
+      filterPredicate = namePredicate ? (node) => { return namePredicate(node.name) } : null
+    } catch (error) {
+      this.nodeFilterElement.setCustomValidity(error.message)
+      this.nodeFilterElement.reportValidity()
+    }
+    if (filterPredicate !== this.filterPredicate) {
+      this.filterPredicate = filterPredicate
+      this.renderer.setFilterPredicate(filterPredicate)
+    } else {
+      state.cancel()
+    }
   }
   updateFilteredStats (state) {
     let maxValue = 0
