@@ -156,6 +156,7 @@ export class Deck {
     page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
     page.primaryView.setFocusNode(sourcePage.primaryView.focusNode)
     page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
+    page.secondaryView.setFilterExpression(sourcePage.secondaryView.filterExpression)
 
     const title = rootName || 'Aggregation #' + (++this.aggregationNo)
     const item = this.newClosableItem(page, title)

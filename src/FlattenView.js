@@ -1,11 +1,10 @@
 import {State} from './State'
-import {stringFilterPlaceholder, stringFilterTooltip, stringFilterPredicate} from './StringFilter'
 import {deltaColor} from './Color'
 import {NodeListRenderer} from './NodeListRenderer'
+import {FilterInputView} from './TextInputView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
-import {StateUpdater} from './StateUpdater'
-import {EnvironmentState, generateElementId, elementWithId} from './EnvironmentState'
+import {EnvironmentState} from './EnvironmentState'
 
 export class FlattenView {
   constructor (model, causalDomain) {
@@ -25,16 +24,10 @@ export class FlattenView {
     toolbarElement.style.flexDirection = 'row'
     toolbarElement.style.flexGrow = '0'
 
-    const nodeFilterId = generateElementId('node-filter')
-    toolbarElement.innerHTML = (
-`<input id="${nodeFilterId}" type="text" style="flex: 1 0" class="fg-input fg-input-mono" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">`)
-    const nodeFilterElement = this.nodeFilterElement = elementWithId(toolbarElement, nodeFilterId)
-    nodeFilterElement.placeholder = stringFilterPlaceholder
-    nodeFilterElement.title = stringFilterTooltip
-    nodeFilterElement.addEventListener('input', (event) => {
-      this.setFilterExpression(this.nodeFilterElement.value)
-      StateUpdater.updater(this.causalDomain).update(250, 100)
-    })
+    const nodeFilterView = this.nodeFilterView = new FilterInputView(this.causalDomain)
+    const nodeFilterElement = nodeFilterView.element
+    nodeFilterElement.style.flex = '1 0'
+    toolbarElement.appendChild(nodeFilterElement)
 
     this.hoveredElement = null
     this.hoveredElementEvent = null
@@ -61,6 +54,7 @@ export class FlattenView {
     this.nodesStatsState.input(renderer.nodesState)
     this.nodesStatsState.input(model.valueState)
     this.filterPredicateState = new State('FlattenView:FilterPredicate', (state) => { this.updateFilterPredicate(state) })
+    this.filterPredicateState.input(nodeFilterView.predicateState)
     this.renderer.filterPredicateState.input(this.filterPredicateState)
     this.filteredStatsState = new State('FlattenView:FilteredStats', (state) => { this.updateFilteredStats(state) })
     this.filteredStatsState.input(renderer.filteredNodesState)
@@ -95,8 +89,10 @@ export class FlattenView {
     this.renderer.elementSize.invalidate()
   }
   setFilterExpression (filterExpression) {
-    this.filterExpression = filterExpression
-    this.filterPredicateState.invalidate()
+    this.nodeFilterView.setText(filterExpression)
+  }
+  get filterExpression () {
+    return this.nodeFilterView.text
   }
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
@@ -185,20 +181,9 @@ export class FlattenView {
     this.nodesMaxDelta = maxDelta
   }
   updateFilterPredicate (state) {
-    let filterPredicate = null
-    try {
-      const namePredicate = stringFilterPredicate(this.filterExpression)
-      filterPredicate = namePredicate ? (node) => { return namePredicate(node.name) } : null
-    } catch (error) {
-      this.nodeFilterElement.setCustomValidity(error.message)
-      this.nodeFilterElement.reportValidity()
-    }
-    if (filterPredicate !== this.filterPredicate) {
-      this.filterPredicate = filterPredicate
-      this.renderer.setFilterPredicate(filterPredicate)
-    } else {
-      state.cancel()
-    }
+    const namePredicate = this.nodeFilterView.predicate
+    const filterPredicate = namePredicate ? (node) => { return namePredicate(node.name) } : null
+    this.renderer.setFilterPredicate(filterPredicate)
   }
   updateFilteredStats (state) {
     let maxValue = 0
