@@ -1,5 +1,6 @@
 # Tasks
 
+- [ ] Extract node filter code in a reusable component
 - [ ] Show self costs everywhere in a convenient way too?
 - [ ] Flatten filter min width seem to be too big and looks bad when compressing right panel.
 - [ ] Inhered search term for flattet view when creating new page
