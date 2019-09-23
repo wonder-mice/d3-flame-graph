@@ -1,5 +1,8 @@
 import {State} from './State'
 
+const StateUpdaterTypingDelay = 250
+const StateUpdaterTypingTolerance = 100
+
 export class StateUpdater {
   constructor (state) {
     this.state = state
@@ -33,5 +36,8 @@ export class StateUpdater {
       updater = state.updater = new StateUpdater(state)
     }
     return updater
+  }
+  static typing (state) {
+    this.updater(state).update(StateUpdaterTypingDelay, StateUpdaterTypingTolerance)
   }
 }
