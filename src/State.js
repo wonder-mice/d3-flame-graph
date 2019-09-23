@@ -304,9 +304,9 @@ export function statesPlot (states) {
       const input = inputs[i]
       const status = input.status
       const producer = input.producer
-      const producerName = producer ? `${producer.name} (${producer.uid})` : `None (${++uid})`
+      const producerName = producer ? `${producer.name} (${producer.uid})` : `Input (${++uid})`
       if (!producer) {
-        dot += `    "${producerName}" [color=grey]\n`
+        dot += `    "${producerName}" [color=grey, shape=box]\n`
       }
       dot += `    "${producerName}" -> "${stateName}"`
       if (inputUnchanged !== status) {
