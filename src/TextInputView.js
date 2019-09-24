@@ -3,12 +3,15 @@ import {StateUpdater} from './StateUpdater'
 import {stringFilterPredicate, stringFilterPlaceholder, stringFilterTooltip} from './StringFilter'
 
 export class TextInputView {
-  constructor (causalDomain) {
+  constructor (causalDomain, element) {
     this.textState = new State('TextInputView:Text', (state) => { this.updateText(state) })
     this.textStateElementContentInput = this.textState.input()
     this.causalDomain = causalDomain || this.textState
 
-    const element = this.element = document.createElement('input')
+    if (!element) {
+      element = document.createElement('input')
+    }
+    this.element = element
     element.type = 'text'
     element.addEventListener('input', (event) => { this.onInput(event) })
   }
@@ -31,9 +34,9 @@ export class TextInputView {
 }
 
 export class FilterInputView extends TextInputView {
-  constructor (causalDomain) {
-    super(causalDomain)
-    const element = this.element
+  constructor (causalDomain, element) {
+    super(causalDomain, element)
+    element = this.element
     element.className = 'fg-input fg-input-mono'
     element.autocomplete = 'off'
     element.autocorrect = 'off'
