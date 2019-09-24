@@ -147,7 +147,7 @@ export class NodeTreeRenderer {
     for (let node = focusNode; node; node = node.parent) {
       stemNodes.push(node)
     }
-    for (let i = stemNodes.length; i--; layoutHeight += nodeHeightPixels) {
+    for (let i = stemNodes.length, parent = null; i--; layoutHeight += nodeHeightPixels) {
       const node = stemNodes[i]
       node.width = layoutWidth
       node.x = 0
@@ -155,6 +155,19 @@ export class NodeTreeRenderer {
       node.flags = (node.flags & layoutMask) | (i ? nodeFlagDescendantFocused : nodeFlagFocused)
       node.rev = revision
       layoutNodes[layoutNodeCount++] = node
+      if (parent) {
+        const siblings = parent.children
+        if (siblings) {
+          for (let j = siblings.length; j--;) {
+            const sibling = siblings[j]
+            if (sibling !== node && (sibling.flags & markMask)) {
+              parent.flags |= nodeFlagHiddenDescendantMarked
+              break
+            }
+          }
+        }
+      }
+      parent = node
     }
     // Layout branches.
     const queue = [focusNode]
