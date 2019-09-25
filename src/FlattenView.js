@@ -1,5 +1,5 @@
 import {State} from './State'
-import {deltaColor} from './Color'
+import {deltaColor, nameColor} from './Color'
 import {NodeListRenderer} from './NodeListRenderer'
 import {FilterInputView} from './TextInputView'
 import {TooltipView} from './TooltipView'
@@ -213,10 +213,10 @@ export class FlattenView {
     if (initial) {
       element.textContent = node.name
     }
-    // FIXME: gradient shoud use absolute values
+    // Would it be better (for performance) to use absolute values (pixels) for gradient?
     const prcnt = (Math.abs(node.total) / this.nodesMaxValue * 100) + '%'
-    // FIXME: color should use name color when no delta available
-    const color = deltaColor(node.delta, this.maxDelta)
+    const nodesMaxDelta = this.nodesMaxDelta
+    const color = nodesMaxDelta ? deltaColor(node.delta, nodesMaxDelta) : nameColor(node.name)
     element.style.background = `linear-gradient(to right, ${color} ${prcnt}, #fff ${prcnt})`
   }
 }
