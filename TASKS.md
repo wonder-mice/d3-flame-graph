@@ -1,12 +1,12 @@
 # Tasks
 
 - [x] Extract node filter code in a reusable component
+- [x] Implement search
+- [x] Inherit search term for flattet view when creating new page
+- [x] No delta color in flatten view
 - [ ] Show self costs everywhere in a convenient way too?
 - [ ] Flatten filter min width seem to be too big and looks bad when compressing right panel.
-- [x] Inherit search term for flattet view when creating new page
-- [ ] No delta color in flatten view
 - [ ] Kill animation of nodes that go from display `none` to `block` from reuse pool.
-- [x] Implement search
 - [ ] Show search summary
 - [ ] Collapse recursion
 - [ ] Implement clipboard copy
