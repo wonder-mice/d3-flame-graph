@@ -37,7 +37,7 @@ export class NodeTreeRenderer {
     this.layoutState = new State('NodeTreeRenderer:Layout', (state) => { this.updateLayout(state) })
     this.layoutState.input(this.rootNodeState)
     this.layoutState.input(this.focusNodeState)
-    // Users can add inputs to `nodeAppearanceChangeState` to signal changes in appearance. This
+    // Users can add inputs to `nodeAppearanceState` to signal changes in appearance. This
     // state implies that appearance for all nodes changed. If appearance changes for known subset
     // of nodes, consider using `nodeAppearanceChangeState` with `setAppearanceChanged()` call to
     // avoid updating nodes for which appearance didn't change.
