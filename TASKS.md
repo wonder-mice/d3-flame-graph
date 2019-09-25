@@ -1,16 +1,12 @@
 # Tasks
 
-- [x] Extract node filter code in a reusable component
-- [x] Implement search
-- [x] Inherit search term for flattet view when creating new page
-- [x] No delta color in flatten view
+- [ ] Show search summary
+- [ ] Implement state saves
+- [ ] Collapse recursion
+- [ ] Implement clipboard copy
 - [ ] Show self costs everywhere in a convenient way too?
 - [ ] Flatten filter min width seem to be too big and looks bad when compressing right panel.
 - [ ] Kill animation of nodes that go from display `none` to `block` from reuse pool.
-- [ ] Show search summary
-- [ ] Collapse recursion
-- [ ] Implement clipboard copy
-- [ ] Implement state saves
 - [ ] Name tab "Selection" only when not everything is selected
 - [ ] Introduce concept of `current` traits for `Deck` and when setting traits only current traits for current active page change.
 - [ ] Deck must have an option for setting minimum node width
