@@ -41,6 +41,7 @@ export class FilterInputView extends TextInputView {
     element.autocomplete = 'off'
     element.autocorrect = 'off'
     element.autocapitalize = 'off'
+    element.name = 'search'
     element.spellcheck = false
     element.placeholder = stringFilterPlaceholder
     element.title = stringFilterTooltip
