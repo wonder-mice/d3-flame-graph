@@ -4,56 +4,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="text/css" href="dist/flamegraph.css">
+  <style>
+  </style>
 </head>
 <body style="height: 100%; display:flex; flex-direction: column; margin: 0;">
-  <div id="header" style="display:flex; flex: none">
-    <h2>🔥</h2>
+  <div id="header" style="display:flex; flex: none; margin-bottom: 8px">
+    <div style="font-size: 16px">🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥</div>
   </div>
+  <div id="state" style="display:none; position:absolute; z-index: 100; width: 900px; height: 500px; bottom: 0"></div>
   <div id="deck" style="display:flex; flex: 1 1 auto"></div>
   <script type = "text/javascript" src = "dist/flamegraph.js"></script>
   <script type = "text/javascript" src = "playground-data.js"></script>
+  <script type = "text/javascript" src = "external/viz/viz.js"></script>
+  <script type = "text/javascript" src = "external/viz/lite.render.js"></script>
   <script type="text/javascript">
+    var viz = new Viz({ Module: Viz.Module, render: Viz.render });
+    document.getElementById('state').style.display = 'block'
+    if (document.getElementById('state').style.display !== 'none') {
+      flamegraph.Metrics.statesUpdate = (...states) => {
+        const g = flamegraph.State.plot(states[0])
+        viz.renderSVGElement(g)
+          .then(function(element) {
+            const state = document.getElementById('state')
+            state.innerHTML = ''
+            element.style.width = '100%'
+            element.style.height = '100%'
+            state.appendChild(element)
+          })
+          .catch(error => {
+            console.log('Error: ' + error)
+          })
+      }
+    }
     // General settings
-    flamegraph.Metrics.enable(true, false, false)
+    // flamegraph.Metrics.enable(true, false, false)
     // Traits
     const structureTraits = new flamegraph.StructureTraits()
-    structureTraits.getName = (item) => { return item.n + '$' }
     const costTraits = new flamegraph.CostTraits()
-    costTraits.recursion = false
-    const valueTraits = new flamegraph.CostTraits()
-    valueTraits.getValue = (cost) => { return cost.v * 2 }
+    const valueTraits = new flamegraph.ValueTraits()
+    valueTraits.getValue = (cost) => { return cost.v }
     // Deck
-    const deckOptions = new flamegraph.DeckOptions()
-    deckOptions.structureRoots = data
-    deckOptions.structureTraits = structureTraits
-    deckOptions.costTraits = costTraits
-    deckOptions.valueTraits = valueTraits
-    deckOptions.nodeTooltipContentCallback = (view, tooltip, node) => {
-      tooltip.body.innerText = 'Value: ' + node.cost.v
-      /*
-      tooltip.buttons
-      let btnSelect = tooltip.btnSelect
-      if (!btnSelect) {
-        btnSelect = tooltip.btnSelect = document.createElement('div')
-      }
-      btnSelect.enable
-      */
-    }
-    const deck = new flamegraph.Deck(document.getElementById('deck'), deckOptions)
-    // deck.setStructureRoots(data)
-    // deck.setStructureTraits(structureTraits)
-    // deck.setCostTraits(costTraits)
-    // deck.setValueTraits(valueTraits)
-    deck.setOrder((a, b) => { return a.cost.v < b.cost.v ? -1 : (a.cost.v > b.cost.v ? 1 : 0) })
-    // deck.setNodeTooltipCallback((view, tooltip, node, cost) => {
-    //   tooltip.header.innerText = node.name
-    //   tooltip.buttons
-    //   let btnSelect = tooltip.btnSelect
-    //   if (!btnSelect) {
-    //     btnSelect = tooltip.btnSelect = document.createElement('div')
-    //   }
-    //   btnSelect.enable
-    // })
+    const deck = new flamegraph.Deck(document.getElementById('deck'))
+    deck.setRootName('Processes')
+    deck.setStructureRoots(data)
+    deck.setStructureTraits(structureTraits)
+    deck.setCostTraits(costTraits)
+    deck.setValueTraits(valueTraits)
+    deck.setOrderFunction((a, b) => { return a.cost.v > b.cost.v ? -1 : (a.cost.v < b.cost.v ? 1 : 0) })
+    deck.setNodeTooltipContentCallback((tooltip, node) => {
+      tooltip.body.textContent = 'Value: ' + node.cost.v + ', selection: ' + node.flags + ' / ' + (node.flags & 0b001000 ? '1' : '0') + (node.flags & 0b000100 ? '1' : '0')
+    })
     deck.update()
   </script>
 </body>
