@@ -155,6 +155,7 @@ export class Deck {
     page.setOrderFunction(sourceModel.orderFunction)
     page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
     page.primaryView.setFocusNode(sourcePage.primaryView.focusNode)
+    page.primaryView.setMarkingExpression(sourcePage.primaryView.markingExpression)
     page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
     page.secondaryView.setFilterExpression(sourcePage.secondaryView.filterExpression)
 

@@ -1,5 +1,4 @@
-import {State} from './State'
-import {EnvironmentState} from './EnvironmentState'
+import {State, StateInputSecondary} from './State'
 import {deltaColor, nameColor} from './Color'
 import {
   nodeRootPath, nodeWalk,
@@ -8,9 +7,12 @@ import {
   nodeMaskFocus, nodeMaskFocusShift, nodeFlagSelected, nodeFlagTiny
 } from './Node'
 import {nodeIndexNodes, createNodeNameIndex} from './NodeIndex'
+import {markNodes} from './NodeMarking'
 import {NodeTreeRenderer} from './NodeTreeRenderer'
+import {FilterInputView} from './TextInputView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
+import {EnvironmentState} from './EnvironmentState'
 
 const pageFlagNodeTinyChanged = 0b01
 const pageFlagNodeColorChanged = 0b10
@@ -92,13 +94,14 @@ export class StructureView {
     toolbarElement.style.display = 'flex'
     toolbarElement.style.flexDirection = 'row'
     toolbarElement.style.flexGrow = '0'
-    toolbarElement.innerHTML = (
-`<div style="flex: 1 0"></div>
-<div style="flex: 0 1; display:flex; flex-direction: row; flex-basis: 25%">
-  <input type="text" style="flex: 1 0" class="fg-input fg-input-mono" value="https://github.com/wonder-mice/zf_log.git">
-  <button type="button" class="fg-btn fg-btn-sm">Search</button>
-  <button type="button" class="fg-btn fg-btn-sm">Clear</button>
-</div>`)
+
+    const toolbarSpacer = toolbarElement.appendChild(document.createElement('div'))
+    toolbarSpacer.style.flex = '1 0'
+
+    const nodeFilterView = this.nodeFilterView = new FilterInputView(this.causalDomain)
+    const nodeFilterElement = nodeFilterView.element
+    nodeFilterElement.style.flex = '0 1 25%'
+    toolbarElement.appendChild(nodeFilterElement)
 
     this.rootIndex = null
     this.rootIndexState = new State('StructureView:RootIndex', (state) => { this.updateRootIndex(state) })
@@ -154,6 +157,13 @@ export class StructureView {
     this.pageStateNodeColorInput = renderer.pageState.input(this.nodeColorState)
     this.pageFlags = 0
 
+    this.markingPredicateState = new State('StructureView:MarkingPredicate', (state) => { this.updateMarkingPredicate(state) })
+    this.markingPredicateState.input(nodeFilterView.predicateState)
+    this.markingState = new State('StructureView:Marking', (state) => { this.updateMarking(state) })
+    this.markingState.input(this.markingPredicateState)
+    renderer.layoutState.input(this.markingState, StateInputSecondary)
+    renderer.nodeAppearanceState.input(this.markingState)
+
     this.hoveredElement = null
     this.hoveredElementEvent = null
     this.hoveredElementState = new State('StructureView:HoveredElement')
@@ -194,6 +204,12 @@ export class StructureView {
   }
   get focusNode () {
     return this.renderer.focusNode
+  }
+  setMarkingExpression (markingExpression) {
+    this.nodeFilterView.setText(markingExpression)
+  }
+  get markingExpression () {
+    return this.nodeFilterView.text
   }
   setResized () {
     this.renderer.elementSize.invalidate()
@@ -245,6 +261,15 @@ export class StructureView {
     // No need in this state right now, but I want to keep it, since computation of
     // focus stats is something we'll probably want at some point.
     state.cancel()
+  }
+  updateMarkingPredicate (state) {
+    const namePredicate = this.nodeFilterView.predicate
+    this.markingPredicate = namePredicate ? (node) => { return namePredicate(node.name) } : null
+  }
+  updateMarking (state) {
+    const renderer = this.renderer
+    const layoutRevision = renderer.layoutState.dirty ? null : renderer.layoutRevision
+    markNodes([this.model.rootNode], this.markingPredicate, layoutRevision)
   }
   updateLayoutStats (state) {
     const layoutNodes = this.renderer.layoutNodes
