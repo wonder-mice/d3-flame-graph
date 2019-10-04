@@ -131,7 +131,7 @@ export class StructureView {
     renderer.focusNodeState.input(this.focusNodeState)
 
     this.focusStatsState = new State('StructureView:FocusStats', (state) => { this.updateFocusStats(state) })
-    this.focusStatsState.input(renderer.focusNodeState)
+    this.focusStatsState.input(this.focusNodeState)
     this.focusStatsState.input(model.valueState)
 
     this.maxDelta = null
@@ -146,7 +146,7 @@ export class StructureView {
     this.nodeColorState.input(this.layoutStatsState)
     this.nodeColorState.input(model.valueState)
 
-    renderer.nodeAppearanceState.input(renderer.focusNodeState)
+    renderer.nodeAppearanceState.input(this.focusNodeState)
     renderer.nodeAppearanceState.input(model.selectionState)
     renderer.nodeContentState.input(this.focusStatsState)
     renderer.nodeContentState.input(this.layoutStatsState)
@@ -217,7 +217,10 @@ export class StructureView {
   onNodeClick (element, event) {
     if (!EnvironmentState.textSelected()) {
       const node = element.__node__
-      this.renderer.setFocusNode(node)
+      // This has small inefficiency in that it will verify that `node` is under `model.rootNode`.
+      // This can optimized by disallowing `setFocusNode()` to be called with out-of-tree nodes and
+      // by providing additional function like `setFocusNodePath()`.
+      this.setFocusNode(node)
       this.causalDomain.update()
     }
   }
