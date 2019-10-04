@@ -1,5 +1,8 @@
 # Tasks
 
+- [ ] Structure view `focusNodeState` (and `rootNodeState`) is a mess. Clean it up.
+- [ ] Figure out what will be considered a `100%` in search summary.
+- [ ] Figure out how to display aggregate value in search summary. Need some "cost to short string" method. Not sure cost traits is a good place for it.
 - [ ] Show search summary
 - [ ] Implement state saves
 - [ ] Collapse recursion
