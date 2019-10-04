@@ -117,10 +117,10 @@ export function markedNodesListAggregate (rootNodes, costTraits, markedNodes) {
   let cost = null
   let n = markedNodes.length
   const queue = [rootNodes]
-  const queueAddTransitive = aggregatesDirect && aggregatesTransitive ? [true] : null
+  const queueAddTransitive = aggregatesTransitive ? [true] : null
   for (let k = queue.length; k--;) {
     const nodes = queue[k]
-    const addTransitive = queueAddTransitive ? queueAddTransitive[k] : aggregatesTransitive
+    const addTransitive = queueAddTransitive && queueAddTransitive[k]
     const addMarked = addTransitive || aggregatesDirect
     for (let i = nodes.length; i--;) {
       const node = nodes[i]
