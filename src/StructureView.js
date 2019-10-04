@@ -161,6 +161,7 @@ export class StructureView {
     this.markingPredicateState.input(nodeFilterView.predicateState)
     this.markingState = new State('StructureView:Marking', (state) => { this.updateMarking(state) })
     this.markingState.input(this.markingPredicateState)
+    this.markingState.input(model.structureState)
     renderer.layoutState.input(this.markingState, StateInputSecondary)
     renderer.nodeAppearanceState.input(this.markingState)
 
