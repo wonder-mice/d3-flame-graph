@@ -68,3 +68,83 @@ export function markNodes (rootNodes, predicate, layoutRevision) {
   }
   return marked
 }
+
+export function markedNodesAggregate (rootNodes, costTraits) {
+  const aggregatesDirect = costTraits.aggregatesDirect
+  const aggregatesTransitive = costTraits.aggregatesTransitive
+  if (!aggregatesDirect && !aggregatesTransitive) {
+    return null
+  }
+  let cost = null
+  const queue = [rootNodes]
+  const queueAddTransitive = aggregatesDirect && aggregatesTransitive ? [true] : null
+  for (let k = queue.length; k--;) {
+    const nodes = queue[k]
+    const addTransitive = queueAddTransitive ? queueAddTransitive[k] : aggregatesTransitive
+    for (let i = nodes.length; i--;) {
+      const node = nodes[i]
+      const flags = node.flags
+      const marked = flags & nodeFlagMarked
+      if (marked) {
+        if (cost) {
+          costTraits.addCost(cost, node.cost, aggregatesDirect, addTransitive)
+        } else {
+          cost = costTraits.copyCost(node.cost)
+        }
+        // Only inspect `children` of marked `node` if `aggregatesDirect` is `true`.
+        if (!aggregatesDirect) {
+          continue
+        }
+      }
+      if (flags & nodeFlagDescendantMarked) {
+        if (queueAddTransitive) {
+          queueAddTransitive[k] = addTransitive && !marked
+        }
+        // `node.children` is non-null and non-empty because it has at least one
+        // marked descendant.
+        queue[k++] = node.children
+      }
+    }
+  }
+  return cost
+}
+
+// Same as `markedNodesAggregate()`, but always traverses all marked nodes to
+// put them into `markedNodes`, which must be a non-null array.
+export function markedNodesListAggregate (rootNodes, costTraits, markedNodes) {
+  const aggregatesDirect = costTraits.aggregatesDirect
+  const aggregatesTransitive = costTraits.aggregatesTransitive
+  let cost = null
+  let n = markedNodes.length
+  const queue = [rootNodes]
+  const queueAddTransitive = aggregatesDirect && aggregatesTransitive ? [true] : null
+  for (let k = queue.length; k--;) {
+    const nodes = queue[k]
+    const addTransitive = queueAddTransitive ? queueAddTransitive[k] : aggregatesTransitive
+    const addMarked = addTransitive || aggregatesDirect
+    for (let i = nodes.length; i--;) {
+      const node = nodes[i]
+      const flags = node.flags
+      const marked = flags & nodeFlagMarked
+      if (marked) {
+        if (addMarked) {
+          if (cost) {
+            costTraits.addCost(cost, node.cost, aggregatesDirect, addTransitive)
+          } else {
+            cost = costTraits.copyCost(node.cost)
+          }
+        }
+        markedNodes[n++] = node
+      }
+      if (flags & nodeFlagDescendantMarked) {
+        if (queueAddTransitive) {
+          queueAddTransitive[k] = addTransitive && !marked
+        }
+        // `node.children` is non-null and non-empty because it has at least one
+        // marked descendant.
+        queue[k++] = node.children
+      }
+    }
+  }
+  return cost
+}
