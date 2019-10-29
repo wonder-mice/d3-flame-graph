@@ -66,7 +66,7 @@ export function markNodes (rootNodes, predicate, layoutRevision) {
       }
     }
   }
-  return marked
+  return 0 < marked.length ? marked : null
 }
 
 export function markedNodesAggregate (rootNodes, costTraits) {
