@@ -110,6 +110,10 @@ export class NodeTooltipView {
     this.contentState.input(this.elementState)
     this.causalDomain = causalDomain || this.contentState
   }
+  setNode (node) {
+    this.node = node
+    this.contentState.invalidate()
+  }
   setContentCallback (contentCallback) {
     this.contentCallback = contentCallback
     this.contentState.invalidate()

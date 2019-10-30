@@ -326,7 +326,7 @@ export class StructureView {
   updateTooltipNode (state) {
     const hoveredNode = this.hoveredNode
     if (hoveredNode) {
-      this.tooltipContentView.node = hoveredNode
+      this.tooltipContentView.setNode(hoveredNode)
     } else {
       state.cancel()
     }
