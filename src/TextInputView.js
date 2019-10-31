@@ -4,6 +4,7 @@ import {stringFilterPredicate, stringFilterPlaceholder, stringFilterTooltip} fro
 
 export class TextInputView {
   constructor (causalDomain, element) {
+    this.text = ''
     this.textState = new State('TextInputView:Text', (state) => { this.updateText(state) })
     this.textStateElementContentInput = this.textState.input()
     this.causalDomain = causalDomain || this.textState
@@ -16,7 +17,7 @@ export class TextInputView {
     element.addEventListener('input', (event) => { this.onInput(event) })
   }
   setText (text) {
-    this.text = text
+    this.text = text || ''
     this.textState.invalidate()
     this.textStateElementContentInput.send()
   }
