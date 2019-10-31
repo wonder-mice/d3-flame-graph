@@ -23,10 +23,10 @@ export class TooltipView {
     const tipRect = element.getBoundingClientRect()
     const clientWidth = document.documentElement.clientWidth
     const clientHeight = document.documentElement.clientHeight
-    const px = event.clientX
-    const py = event.clientY
+    const px = event ? event.clientX : targetRect.x
+    const py = event ? event.clientY : targetRect.y
     const pd = targetRect.height
-    let x = px + pd
+    let x = event ? px + pd : px
     let y = py + pd
     if (clientWidth < x + tipRect.width) {
       x = clientWidth - tipRect.width
