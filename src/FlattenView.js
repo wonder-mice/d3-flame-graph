@@ -85,6 +85,14 @@ export class FlattenView {
     this.renderer.discard()
     document.body.removeChild(this.tooltipView.element)
   }
+  setHidden (hidden) {
+    if (hidden) {
+      this.tooltipView.hide()
+      this.hoveredElement = null
+      this.hoveredElementEvent = null
+      this.hoveredElementState.invalidate()
+    }
+  }
   setResized () {
     this.renderer.elementSize.invalidate()
   }
@@ -132,7 +140,8 @@ export class FlattenView {
       this.hoveredNode = null
       return
     }
-    if (!this.hoveredElementEvent.shiftKey || !hoveredNode) {
+    const hoveredElementEvent = this.hoveredElementEvent
+    if (!hoveredElementEvent || !hoveredElementEvent.shiftKey || !hoveredNode) {
       const hoveredElement = this.hoveredElement
       const node = hoveredElement ? hoveredElement.__node__ : null
       if (node !== hoveredNode) {
@@ -154,7 +163,8 @@ export class FlattenView {
     const hoveredNode = this.hoveredNode
     if (hoveredNode) {
       if (this.tooltipPositionStateHoveredNodeInput.changed) {
-        if (this.tooltipView.shown || !this.hoveredElementEvent.shiftKey) {
+        const hoveredElementEvent = this.hoveredElementEvent
+        if (this.tooltipView.shown || !hoveredElementEvent || !hoveredElementEvent.shiftKey) {
           this.tooltipView.show(this.hoveredNode.element, this.hoveredElementEvent)
         }
       } else if (!this.hoveredElementEvent.shiftKey) {

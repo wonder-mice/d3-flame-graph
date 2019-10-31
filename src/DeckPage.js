@@ -124,10 +124,8 @@ export class DeckPage {
     this.secondaryView.tooltipContentView.setContentCallback(nodeTooltipContentCallback)
   }
   setHidden (hidden) {
-    if (hidden) {
-      this.primaryView.tooltipView.hide()
-      this.secondaryView.tooltipView.hide()
-    }
+    this.primaryView.setHidden(hidden)
+    this.secondaryView.setHidden(hidden)
     this.element.style.display = hidden ? 'none' : 'flex'
   }
 }

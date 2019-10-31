@@ -197,7 +197,19 @@ export class StructureView {
   }
   discard () {
     this.renderer.discard()
+    this.totalFilteredStatsView.discard()
+    this.focusFilteredStatsView.discard()
     document.body.removeChild(this.tooltipView.element)
+  }
+  setHidden (hidden) {
+    if (hidden) {
+      this.tooltipView.hide()
+      this.totalFilteredStatsView.tooltipView.hide()
+      this.totalFilteredStatsView.tooltipView.hide()
+      this.hoveredElement = null
+      this.hoveredElementEvent = null
+      this.hoveredElementState.invalidate()
+    }
   }
   setFocusNode (node) {
     this.renderer.setFocusNode(node)
@@ -302,7 +314,8 @@ export class StructureView {
     // If we want discard tooltip when node becomes invisible, here we
     // can check for its revision to see whether it was included in layout.
     // Will need to add dependency on layoutState for that though.
-    if (!hoveredNode || !this.hoveredElementEvent.shiftKey) {
+    const hoveredElementEvent = this.hoveredElementEvent
+    if (!hoveredNode || !hoveredElementEvent || !hoveredElementEvent.shiftKey) {
       const hoveredElement = this.hoveredElement
       const node = hoveredElement ? hoveredElement.__node__ : null
       if (node !== hoveredNode) {
@@ -335,7 +348,8 @@ export class StructureView {
     const hoveredNode = this.hoveredNode
     if (hoveredNode) {
       if (this.tooltipPositionStateHoveredNodeInput.changed) {
-        if (this.tooltipView.shown || !this.hoveredElementEvent.shiftKey) {
+        const hoveredElementEvent = this.hoveredElementEvent
+        if (this.tooltipView.shown || !hoveredElementEvent || !hoveredElementEvent.shiftKey) {
           this.tooltipView.show(this.hoveredNode.element, this.hoveredElementEvent)
         }
       } else if (!this.hoveredElementEvent.shiftKey) {
