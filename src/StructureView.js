@@ -347,13 +347,13 @@ export class StructureView {
   updateTooltipPosition (state) {
     const hoveredNode = this.hoveredNode
     if (hoveredNode) {
+      const hoveredElementEvent = this.hoveredElementEvent
       if (this.tooltipPositionStateHoveredNodeInput.changed) {
-        const hoveredElementEvent = this.hoveredElementEvent
         if (this.tooltipView.shown || !hoveredElementEvent || !hoveredElementEvent.shiftKey) {
-          this.tooltipView.show(this.hoveredNode.element, this.hoveredElementEvent)
+          this.tooltipView.show(this.hoveredNode.element, hoveredElementEvent)
         }
-      } else if (!this.hoveredElementEvent.shiftKey) {
-        this.tooltipView.move(this.hoveredElementEvent)
+      } else if (hoveredElementEvent && !hoveredElementEvent.shiftKey) {
+        this.tooltipView.move(hoveredElementEvent)
       }
     } else {
       this.tooltipView.hide()
