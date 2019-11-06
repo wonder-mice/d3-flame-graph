@@ -105,6 +105,9 @@ export class NodeTooltipView {
     this.contentCallback = null
     this.selectionInterface = null
     this.node = null
+    this.named = true
+    this.header = null
+    this.body = null
     this.elementState = new State('NodeTooltipView::Element', (state) => { this.updateElement(state) })
     this.contentState = new State('NodeTooltipView::Content', (state) => { this.updateContent(state) })
     this.contentState.input(this.elementState)
@@ -122,7 +125,12 @@ export class NodeTooltipView {
     this.selectionInterface = selectionInterface
     this.elementState.invalidate()
   }
+  setNamed (named) {
+    this.named = named
+    this.elementState.invalidate()
+  }
   updateElement (state) {
+    const named = this.named
     const headerId = generateElementId('tooltip-header')
     const bodyId = generateElementId('tooltip-body')
 
@@ -130,8 +138,10 @@ export class NodeTooltipView {
     for (const name in buttons) {
       buttonIds[name] = generateElementId('tooltip-button')
     }
-    const contentHTML = (
-      `<div class='fg-tooltip'>
+    let contentHTML = (`
+      <div class='fg-tooltip'>`)
+    if (named) {
+      contentHTML += (`
         <div style="display: flex">
           <div id="${headerId}" class="fg-tooltip-header" style="flex: 1 1 auto"></div>
           <div class="fg-dropdown">
@@ -146,61 +156,74 @@ export class NodeTooltipView {
               <span class="fg-btn fg-btn-sm" style="align-self:stretch">Copy view state</span>
             </div>
           </div>
-          <div></div>
-        </div>
-        <div id="${bodyId}" class="fg-tooltip-body">
-        </div>
+        </div>`)
+    }
+    contentHTML += (`
+        <div id="${bodyId}" class="fg-tooltip-body"></div>
         <div>
-          <div style="display: flex">
+          <div style="display: flex">`)
+    contentHTML += (`
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.setSubtree}" title="${buttons.setSubtree.title}">${buttons.setSubtree.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setAncestors}" title="${buttons.setAncestors.title}">${buttons.setAncestors.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNode}" title="${buttons.setNode.title}">${buttons.setNode.content}</span>
               </div>
-            </div>
+            </div>`)
+    if (named) {
+      contentHTML += (`
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.setNamedSubtrees}" title="${buttons.setNamedSubtrees.title}">${buttons.setNamedSubtrees.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedAncestors}" title="${buttons.setNamedAncestors.title}">${buttons.setNamedAncestors.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.setNamedNodes}" title="${buttons.setNamedNodes.title}">${buttons.setNamedNodes.content}</span>
               </div>
-            </div>
+            </div>`)
+    }
+    contentHTML += (`
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.includeNode}" title="${buttons.includeNode.title}">${buttons.includeNode.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeSubtree}" title="${buttons.includeSubtree.title}">${buttons.includeSubtree.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeAncestors}" title="${buttons.includeAncestors.title}">${buttons.includeAncestors.content}</span>
               </div>
-            </div>
+            </div>`)
+    if (named) {
+      contentHTML += (`
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.includeNamed}" title="${buttons.includeNamed.title}">${buttons.includeNamed.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeNamedSubtrees}" title="${buttons.includeNamedSubtrees.title}">${buttons.includeNamedSubtrees.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.includeNamedAncestors}" title="${buttons.includeNamedAncestors.title}">${buttons.includeNamedAncestors.content}</span>
               </div>
-            </div>
+            </div>`)
+    }
+    contentHTML += (`
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.excludeNode}" title="${buttons.excludeNode.title}">${buttons.excludeNode.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeSubtree}" title="${buttons.excludeSubtree.title}">${buttons.excludeSubtree.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeAncestors}" title="${buttons.excludeAncestors.title}">${buttons.excludeAncestors.content}</span>
               </div>
-            </div>
+            </div>`)
+    if (named) {
+      contentHTML += (`
             <div class="fg-dropdown">
               <span class="fg-btn fg-btn-sm" id="${buttonIds.excludeNamed}" title="${buttons.excludeNamed.title}">${buttons.excludeNamed.content}</span>
               <div class="fg-dropdown-content fg-dropdown-content-lb" style="display: flex; flex-direction: column-reverse">
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeNamedSubtrees}" title="${buttons.excludeNamedSubtrees.title}">${buttons.excludeNamedSubtrees.content}</span>
                 <span class="fg-btn fg-btn-sm" style="align-self:stretch" id="${buttonIds.excludeNamedAncestors}" title="${buttons.excludeNamedAncestors.title}">${buttons.excludeNamedAncestors.content}</span>
               </div>
-            </div>
+            </div>`)
+    }
+    contentHTML += (`
           </div>
           <div class="fg-tooltip-hint">
             <div class="fg-tooltip-hint-mouse-out">Hold <kbd>Shift</kbd> to move mouse inside.</div>
             <div class="fg-tooltip-hint-mouse-in">Release <kbd>Shift</kbd> to select text.</div>
           </div>
         </div>
-      </div`)
+      </div>`)
     const container = this.container
     container.innerHTML = contentHTML
     this.header = elementWithId(container, headerId)
@@ -208,16 +231,21 @@ export class NodeTooltipView {
 
     const causalDomain = this.causalDomain
     for (const name in buttons) {
-      elementWithId(container, buttonIds[name]).addEventListener('click', (event) => {
-        buttons[name].callback(this.selectionInterface, this.node)
-        causalDomain.update()
-      })
+      const buttonElement = elementWithId(container, buttonIds[name])
+      if (buttonElement) {
+        buttonElement.addEventListener('click', (event) => {
+          buttons[name].callback(this.selectionInterface, this.node)
+          causalDomain.update()
+        })
+      }
     }
   }
   updateContent (state) {
     const node = this.node
     if (node) {
-      this.header.textContent = node.name
+      if (this.named) {
+        this.header.textContent = node.name
+      }
       const contentCallback = this.contentCallback
       if (contentCallback) {
         contentCallback(this, node)
