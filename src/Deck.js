@@ -144,7 +144,8 @@ export class Deck {
     const sourcePage = sourceItem.page
     const sourceModel = sourcePage.primaryModel
     const page = this.newPage()
-    const selectedRoots = NodeSelectionStructureTraits.selectedRoots([sourceModel.rootNode])
+    const primaryViewFocusNode = sourcePage.primaryView.focusNode
+    const selectedRoots = NodeSelectionStructureTraits.selectedRoots([primaryViewFocusNode || sourceModel.rootNode])
     const rootName = NodeSelectionStructureTraits.suggestedName(selectedRoots, '(Empty)', null)
     page.setRootName(rootName || 'Everything')
     page.setStructureRoots(selectedRoots)
@@ -154,7 +155,7 @@ export class Deck {
     page.setValueTraits(sourceModel.valueTraits)
     page.setOrderFunction(sourceModel.orderFunction)
     page.setNodeTooltipContentCallback(this.nodeTooltipContentCallback)
-    page.primaryView.setFocusNode(sourcePage.primaryView.focusNode)
+    page.primaryView.setFocusNode(primaryViewFocusNode)
     page.primaryView.setMarkingExpression(sourcePage.primaryView.markingExpression)
     page.secondaryModel.setStructurePath(sourcePage.secondaryModel.structurePath)
     page.secondaryView.setFilterExpression(sourcePage.secondaryView.filterExpression)
