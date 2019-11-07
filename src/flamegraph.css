@@ -195,11 +195,6 @@
   background-color: rgba(27,31,35,.16);
 }
 
-/* Other */
-.fg-nsel {
-  opacity: 0.25;
-}
-
 .fg-tooltip {
   font-family: Verdana;
   font-size: 12px;
@@ -274,10 +269,6 @@
   color: black;
 }
 
-.fg-tiny {
-  padding: 0;
-}
-
 .fg-node:hover {
   border: 1px solid black;
   /* cursor: pointer; */
@@ -286,6 +277,15 @@
 .fg-node:hover {
   text-overflow: clip;
   /* cursor: pointer; */
+}
+
+.fg-tiny {
+  padding: 0;
+}
+
+/* Other */
+.fg-nsel {
+  opacity: 0.25;
 }
 
 /* Node is on path from focused node to the root. */
