@@ -7,11 +7,12 @@ import {
   nodeMaskFocus, nodeMaskFocusShift, nodeFlagSelected, nodeFlagTiny
 } from './Node'
 import {nodeIndexNodes, createNodeNameIndex} from './NodeIndex'
-import {markNodes} from './NodeMarking'
+import {markNodes, markedNodesAggregate, markedNodesListAggregate} from './NodeMarking'
 import {NodeTreeRenderer} from './NodeTreeRenderer'
 import {FilterInputView} from './TextInputView'
 import {TooltipView} from './TooltipView'
 import {NodeTooltipView} from './NodeTooltipView'
+import {StructureStatView} from './StructureStatView'
 import {EnvironmentState} from './EnvironmentState'
 
 const pageFlagNodeTinyChanged = 0b01
@@ -97,6 +98,20 @@ export class StructureView {
 
     const toolbarSpacer = toolbarElement.appendChild(document.createElement('div'))
     toolbarSpacer.style.flex = '1 0'
+    toolbarSpacer.style.display = 'flex'
+    toolbarSpacer.style.flexDirection = 'row'
+    toolbarSpacer.style.alignItems = 'center'
+
+    const totalFilteredStatsView = this.totalFilteredStatsView = new StructureStatView(model, this.causalDomain)
+    totalFilteredStatsView.setSummaryStringPrefix('Total: ')
+    totalFilteredStatsView.element.style.flex = '1 1'
+    totalFilteredStatsView.element.style.margin = '0 4px 0 4px'
+    toolbarSpacer.appendChild(totalFilteredStatsView.element)
+    const focusFilteredStatsView = this.focusFilteredStatsView = new StructureStatView(model, this.causalDomain)
+    focusFilteredStatsView.setSummaryStringPrefix('Focus: ')
+    focusFilteredStatsView.element.style.flex = '1 1'
+    focusFilteredStatsView.element.style.margin = '0 4px 0 4px'
+    toolbarSpacer.appendChild(focusFilteredStatsView.element)
 
     const nodeFilterView = this.nodeFilterView = new FilterInputView(this.causalDomain)
     const nodeFilterElement = nodeFilterView.element
@@ -157,6 +172,7 @@ export class StructureView {
     this.pageStateNodeColorInput = renderer.pageState.input(this.nodeColorState)
     this.pageFlags = 0
 
+    this.markedNodes = null
     this.markingPredicateState = new State('StructureView:MarkingPredicate', (state) => { this.updateMarkingPredicate(state) })
     this.markingPredicateState.input(nodeFilterView.predicateState)
     this.markingState = new State('StructureView:Marking', (state) => { this.updateMarking(state) })
@@ -164,6 +180,24 @@ export class StructureView {
     this.markingState.input(model.structureState)
     renderer.layoutState.input(this.markingState, StateInputSecondary)
     renderer.nodeAppearanceState.input(this.markingState)
+
+    this.markingAggregate = null
+    this.markingStatsState = new State('StructureView:MarkingStats', (state) => { this.updateMarkingStats(state) })
+    this.markingStatsState.input(this.markingState)
+    this.markingStatsState.input(model.costTraitsState)
+    this.markingFocusAggregate = null
+    this.markingFocusStatsState = new State('StructureView:MarkingFocusStats', (state) => { this.updateMarkingFocusStats(state) })
+    this.markingFocusStatsState.input(this.markingState)
+    this.markingFocusStatsState.input(this.markingStatsState)
+    this.markingFocusStatsState.input(this.focusNodeState)
+    this.markingFocusStatsState.input(model.costTraitsState)
+
+    this.markingBarsState = new State('StructureView:MarkingBars', (state) => { this.updateMarkingBars(state) })
+    this.markingBarsState.input(this.markingPredicateState)
+    this.markingBarsState.input(this.markingStatsState)
+    this.markingBarsState.input(this.markingFocusStatsState)
+    totalFilteredStatsView.statState.input(this.markingBarsState)
+    focusFilteredStatsView.statState.input(this.markingBarsState)
 
     this.hoveredElement = null
     this.hoveredElementEvent = null
@@ -193,6 +227,8 @@ export class StructureView {
     this.tooltipPositionStateHoveredNodeInput = this.tooltipPositionState.input(this.hoveredNodeState)
 
     this.state.input(renderer.pageState)
+    this.state.input(totalFilteredStatsView.state)
+    this.state.input(focusFilteredStatsView.state)
     this.state.input(this.tooltipPositionState)
   }
   discard () {
@@ -280,12 +316,67 @@ export class StructureView {
   }
   updateMarkingPredicate (state) {
     const namePredicate = this.nodeFilterView.predicate
-    this.markingPredicate = namePredicate ? (node) => { return namePredicate(node.name) } : null
+    const markingPredicate = namePredicate ? (node) => { return namePredicate(node.name) } : null
+    if (markingPredicate === this.markingPredicate) {
+      state.cancel()
+    } else {
+      this.markingPredicate = markingPredicate
+    }
   }
   updateMarking (state) {
     const renderer = this.renderer
     const layoutRevision = renderer.layoutState.dirty ? null : renderer.layoutRevision
-    markNodes([this.model.rootNode], this.markingPredicate, layoutRevision)
+    const markedNodes = markNodes([this.model.rootNode], this.markingPredicate, layoutRevision)
+    if (markedNodes === this.markedNodes) {
+      state.cancel()
+    } else {
+      this.markedNodes = markedNodes
+    }
+  }
+  updateMarkingStats (state) {
+    const markedNodes = this.markedNodes
+    if (!markedNodes && !this.markingAggregate) {
+      state.cancel()
+    } else if (markedNodes) {
+      const model = this.model
+      const rootNode = model.rootNode
+      this.markingAggregate = markedNodesAggregate([rootNode], model.costTraits)
+    } else {
+      this.markingAggregate = null
+    }
+  }
+  updateMarkingFocusStats (state) {
+    const markedNodes = this.markedNodes
+    const focusNode = this.focusNode
+    const model = this.model
+    if (!markedNodes && !this.markingFocusAggregate) {
+      state.cancel()
+    } else if (markedNodes && focusNode && focusNode !== model.rootNode) {
+      const markedFocusNodes = []
+      this.markingFocusAggregate = markedNodesListAggregate([focusNode], model.costTraits, markedFocusNodes)
+      this.markedFocusNodes = markedFocusNodes.length ? markedFocusNodes : null
+    } else {
+      this.markingFocusAggregate = this.markingAggregate
+      this.markedFocusNodes = markedNodes
+    }
+  }
+  updateMarkingBars (state) {
+    if (this.markingPredicate) {
+      const model = this.model
+      const rootNode = model.rootNode
+      const focusNode = this.focusNode
+      const markingAggregate = this.markingAggregate
+      this.totalFilteredStatsView.setStat(rootNode, this.markedNodes, markingAggregate)
+      if (focusNode && focusNode !== rootNode) {
+        const markingFocusAggregate = this.markingFocusAggregate
+        this.focusFilteredStatsView.setStat(focusNode, this.markedFocusNodes, markingFocusAggregate)
+      } else {
+        this.focusFilteredStatsView.setEmpty()
+      }
+    } else {
+      this.totalFilteredStatsView.setEmpty()
+      this.focusFilteredStatsView.setEmpty()
+    }
   }
   updateLayoutStats (state) {
     const layoutNodes = this.renderer.layoutNodes
