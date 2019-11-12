@@ -237,7 +237,7 @@
 .fg-tooltip {
   font-family: Verdana;
   font-size: 12px;
-  padding: 8px;
+  padding: 8px 8px 4px 8px;
   background: rgba(0, 0, 0, 0.8);
   color: #fff;
   border-radius: 2px;
@@ -260,6 +260,7 @@
   font-size: 8px;
   text-align: right;
   margin-left:1rem;
+  margin-top: 4px;
   overflow: hidden;
   align-self: flex-end;
 }
