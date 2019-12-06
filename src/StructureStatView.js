@@ -167,7 +167,6 @@ export class StructureStatView {
         summaryString = costSummary ? `${costSummary} (${countSummary})` : `${countSummary}`
         barWidth = `${100 * adjustedRatio}%`
         barColor = deltaColor(statDelta, scopeDelta)
-        this.barView.show(`Total: ${valueTraits.getValueStr(statCost)} (${statCount} nodes)`)
       } else {
         summaryString = this.summaryStringBlank || '-'
         barWidth = '0'
