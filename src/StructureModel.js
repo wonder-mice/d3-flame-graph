@@ -178,7 +178,7 @@ export class StructureModel {
         const cost = node.cost
         total += (node.total = node.self = valueTraits.getValue(cost) || 0)
         if (delta) {
-          node.delta = valueTraits.getDelta(cost) || 0
+          node.maxdelta = Math.abs(node.delta = valueTraits.getDelta(cost) || 0)
         }
       }
       if (!direct && 0 < k) {
@@ -188,17 +188,31 @@ export class StructureModel {
         parent.self -= total
       }
     }
-    // If neccessary, traverse the tree in reverse order to compute `total` fields.
-    if (direct) {
+    // If neccessary, traverse the tree in reverse order to compute `total` and/or `maxdelta` fields.
+    if (direct || delta) {
       for (let k = siblingCount; 1 < k--;) {
         const siblings = siblingNodes[k]
+        const parent = siblings[0]
         let total = 0
+        let maxdelta = 0
         for (let i = siblings.length; i--;) {
-          total += siblings[i].total
+          const sibling = siblings[i]
+          if (direct) {
+            total += sibling.total
+          }
+          if (delta) {
+            const smaxdelta = sibling.maxdelta
+            if (maxdelta < smaxdelta) {
+              maxdelta = smaxdelta
+            }
+          }
         }
-        // Same here, can use non-constant variable in loop above and use its last value here as "any node".
-        const parent = siblings[0].parent
-        parent.total += total
+        if (direct) {
+          parent.total += total
+        }
+        if (delta && parent.maxdelta < maxdelta) {
+          parent.maxdelta = maxdelta
+        }
       }
     }
   }
