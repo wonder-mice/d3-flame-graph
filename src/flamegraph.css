@@ -245,6 +245,8 @@
 
 .fg-tooltip-header {
   font-family: monospace;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .fg-tooltip-body {
