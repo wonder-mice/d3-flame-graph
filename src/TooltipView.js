@@ -18,8 +18,10 @@ export class TooltipView {
     const element = this.element
     const style = element.style
     style.visibility = 'hidden'
-    const targetRect = target.getBoundingClientRect()
     const insideRect = element.parentElement.getBoundingClientRect()
+    style.maxWidth = insideRect.width + 'px'
+    style.maxHeight = insideRect.height + 'px'
+    const targetRect = target.getBoundingClientRect()
     const tipRect = element.getBoundingClientRect()
     const clientWidth = document.documentElement.clientWidth
     const clientHeight = document.documentElement.clientHeight
