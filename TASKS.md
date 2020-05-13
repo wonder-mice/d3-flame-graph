@@ -1,9 +1,11 @@
 # Tasks
 
-- [ ] Structure view `focusNodeState` (and `rootNodeState`) is a mess. Clean it up.
-- [ ] Figure out what will be considered a `100%` in search summary.
-- [ ] Figure out how to display aggregate value in search summary. Need some "cost to short string" method. Not sure cost traits is a good place for it.
-- [ ] Show search summary
+- [ ] It is useful to be able to normalize costs from single fragment over its duration (in seconds)
+- [ ] It is useful to know how much fragments have specific fragment / module in them.
+- [x] Structure view `focusNodeState` (and `rootNodeState`) is a mess. Clean it up.
+- [x] Figure out what will be considered a `100%` in search summary.
+- [x] Figure out how to display aggregate value in search summary. Need some "cost to short string" method. Not sure cost traits is a good place for it.
+- [x] Show search summary
 - [ ] Implement state saves
 - [ ] Collapse recursion
 - [ ] Implement clipboard copy
@@ -249,3 +251,56 @@ Is it should be considered legal to modify already updated subgraph? Only hard c
 - Deal with that in a smart way
 
 One interesting limitation that can be introduced is that only currently updating state is allowed to add new inputs and only to itself. Then it can update added subgraph in a nested pass, add inputs to itself and update itself, thus the entire subgraph will be clean.
+
+## Visualizing node values
+
+Each node has two numeric values associated with it: `value` and `delta`. Names are historical and don't mean much, so both of them are just arbitrary real numbers (positive and negative). Difference is in how they are being used - `value` for node `width` and `delta` for node `color`. Semantically that means that `value` visualization loses sign information (since width can't be negative), while `delta` color can show both negative (e.g. green) and positive (e.g. red) values. Another difference is that `value` (width) is visualized relative to parent node, while `delta` (color) is visualized globally. What that means is that `width` shows how `values` of node and its children relate, but it's meaningless to compare `width` of nodes that are not siblings (because node's width is just a proportion of how much its `value` contributes to parent `value`). Color on other hand is global and `delta` of any two nodes can be compared using their colors. Another way to view at it is that node's `value` is visualized as relationship to the "whole", meaning that node's `width` tells how much node's `value` is contributing to parent's `value`, and parent's `width` tells how much its `value` is contributing to its parent's `value` and so on up to the root node. On other hand, `delta` is visualized as relationship to "others", meaning that node's `color` shows how big/small node's `delta` to `delta` of other nodes.
+
+Note, that both visualizations are constrained - there is maximum width and maximum color intensity. Because of that, we need to scale each visualized value so:
+
+- It fits in visualizable range (max width or max color intensity).
+- It makes sense, consistent and easy to reason about.
+
+Interesting observation is that to make specific node wider you must sacrifice width of its adjacent nodes (siblings), because nodes can't overlap. If all siblings have very large `value` associated with them, but there is many of them, each will be visualized as just a thin strip. This doesn't apply to colors - any node can be made arbitrary intensive without impacting intencity of other nodes.
+
+To perform mentioned scaling, we need to decide what `value` or `delta` values will be considered `100%` of maximum, or in other words what this `100%` maximum is. What makes this problem hard is presence of negative values (since both `value` and/or `delta` can be negative). With negative values, `part` (e.g. child node) can be "more" than a `whole` (e.g. parent node).
+
+| Visualization  | `value`          | `delta`                |
+|----------------|------------------|------------------------|
+| Medium         | `width`          | `color`                |
+| Preserves sign | No               | Yes                    |
+| Relative to    | Parent / Whole   | Other individual nodes |
+| Constrained by | Available space  | Maximum intencity      |
+
+
+Since both `value` and `delta` are arbitrary numbers, it's required to decide whether these numbers are `direct` or `transitive`, so certain operations can be performed with them. For each node, its transitive value is considered to be a sum of direct values over all its descendants. And node's direct value is its transitive value minus sum of transitive values of all its (direct) children. Currently there is a single flag that controls both `value` and `delta` transitivity, but since `value` and `delta` computations are independent, it's easy to have two separate flags.
+
+
+
+### Visualizing aggregated costs
+
+Think about it as creating a new node which has all aggregated (selected, marked, etc.) nodes as its children. Then, when deciding what `100%` is just consider all original nodes and new node. It works nicely for `delta`, because it's more absolute. For `value` you would need to dicede relative to what parent. Which is probably the root/focus.
+
+First question to answer is what defines 100%?
+
+When all values are positive it's straightforward.
+
+Another difference that `value` is visualized "relative to parent node", meaning that width of a node is proportional to contribution of its value into parent's value. `delta` on other hands is visualized globally, meaning that color intencity is proporti
+
+
+
+We have two
+
+- Individual nodes
+- Node aggregations
+
+Also:
+
+- Local visualization
+- Global visualization
+
+So:
+
+- Put transitive cost in a file, since it's easier to compute direct cost (need on down pass, while computation of transitive cost from direct requires down and up pass).
+- When data is loaded, compute direct part of a cost. Now cost objects has both direct and transitive costs.
+- Pick value traits to show information needed.
